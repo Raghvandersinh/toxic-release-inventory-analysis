@@ -99,7 +99,7 @@ class TRIFacilitynpdes(Base):
     __tablename__ = 'tri_facility_npdes'
 
     asgn_npdes_ind = Column(Boolean)
-    npdes_num = Column(String(10), primary_key=True)
+    npdes_num = Column(String(15), primary_key=True)
     tri_facility_id = Column(String(15), primary_key=True)
 
 class TRIFacilityRCRA(Base):
@@ -107,7 +107,7 @@ class TRIFacilityRCRA(Base):
     __tablename__ = 'tri_facility_rcra'
 
     asgn_rcra_ind = Column(Boolean)
-    rcra_num = Column(String(15), primary_key=True)
+    rcra_num = Column(String(20), primary_key=True)
     tri_facility_id = Column(String(15), primary_key=True)
 
 class TRIFacilityUIC(Base):
@@ -117,6 +117,6 @@ class TRIFacilityUIC(Base):
     __tablename__ = 'tri_facility_uic'
     
     asgn_uic_ind = Column(Boolean)
-    uic_num = Column(String(10), primary_key=True)
+    uic_num = Column(String(20), primary_key=True)
     tri_facility_id = Column(String(15), primary_key=True)
     
