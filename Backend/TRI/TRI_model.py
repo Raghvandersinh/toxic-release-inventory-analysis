@@ -88,3 +88,35 @@ class TriFormTotal(Base):
     total_recycling_transfer = Column(String(50))
     total_water_release = Column(String(50))
     number_of_streams = Column(String(50))
+
+class TRIFacilityDB(Base):
+    __tablename__ = 'tri_facility_db'
+    db_num = Column(Integer, primary_key=True)
+    tri_facility_id = Column(String(15), primary_key=True)
+    
+class TRIFacilitynpdes(Base):
+    # Permit a facility has to discharge chemical in specific bodies of water
+    __tablename__ = 'tri_facility_npdes'
+
+    asgn_npdes_ind = Column(Boolean)
+    npdes_num = Column(String(10), primary_key=True)
+    tri_facility_id = Column(String(15), primary_key=True)
+
+class TRIFacilityRCRA(Base):
+    #ID number given to facility that manages Regulated Hazardous Waste.
+    __tablename__ = 'tri_facility_rcra'
+
+    asgn_rcra_ind = Column(Boolean)
+    rcra_num = Column(String(15), primary_key=True)
+    tri_facility_id = Column(String(15), primary_key=True)
+
+class TRIFacilityUIC(Base):
+    # ID number for each Underground injection Well a facility has
+    # Under the Safe Drinking Water Act
+    
+    __tablename__ = 'tri_facility_uic'
+    
+    asgn_uic_ind = Column(Boolean)
+    uic_num = Column(String(10), primary_key=True)
+    tri_facility_id = Column(String(15), primary_key=True)
+    
