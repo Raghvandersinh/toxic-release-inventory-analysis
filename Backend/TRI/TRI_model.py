@@ -91,7 +91,7 @@ class TriFormTotal(Base):
 
 class TRIFacilityDB(Base):
     __tablename__ = 'tri_facility_db'
-    db_num = Column(Integer, primary_key=True)
+    db_num = Column(String(15), primary_key=True)
     tri_facility_id = Column(String(15), primary_key=True)
     
 class TRIFacilitynpdes(Base):
