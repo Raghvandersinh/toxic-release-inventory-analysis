@@ -161,12 +161,14 @@ def transform_tri_form_total(raw_data):
         df['total_recycling_transfer'] = df['total_recycling_transfer'].astype(str)
         df['total_water_release'] = df['total_water_release'].astype(str)
         df['number_of_streams'] = df['number_of_streams'].astype(str)
+
         return df
     
     except Exception as e:
         print(f'Transformation Failed {e}')
         import traceback; traceback.print_exc();
         return None
+    
 def transform_tri_facility_db(raw_data):
     try:
         df = pd.DataFrame(raw_data)
@@ -185,7 +187,7 @@ def transform_tri_facility_npdes(raw_data):
         df = true_false_to_boolean(df, column = 'asgn_npdes_ind')
         df['npdes_num'] = df['npdes_num'].astype(str)
         df['tri_facility_id'] = df['tri_facility_id'].astype(str)
-        
+
         return df
     except Exception as e:
         print(f'Transformation Failed {e}')
@@ -198,6 +200,7 @@ def transform_tri_facility_rcra(raw_data):
         df = true_false_to_boolean(df, 'asgn_rcra_ind')
         df['rcra_num'] = df['rcra_num'].astype(str)
         df['tri_facility_id'] = df['tri_facility_id'].astype(str)
+
         return df
     except Exception as e:
         print(f'Transformation Failed {e}')
@@ -210,7 +213,7 @@ def transform_tri_facility_uic(raw_data):
         df = true_false_to_boolean(df, column = 'asgn_uic_ind')
         df['uic_num'] = df['uic_num'].astype(str)
         df['tri_facility_id'] = df['tri_facility_id'].astype(str)
-        
+
         return df
     except Exception as e:
         print(f'Transformation Failed {e}')
@@ -293,6 +296,8 @@ def transform_main(table, start, end, increment, loop_count, db_table, df):
     
     inspector = inspect(engine)
     table_col = [col['name'] for col in inspector.get_columns(db_table)]
+    if 'id' in table_col:
+        table_col.remove('id')
     pk_columns = inspector.get_pk_constraint(db_table)['constrained_columns']
     db_table_obj = get_table_object(db_table)
     
@@ -317,10 +322,10 @@ def transform_main(table, start, end, increment, loop_count, db_table, df):
         import traceback; traceback.print_exc();
                     
 if __name__ == "__main__":
-    transform_main(db_table='tri_reporting_form',table='tri_reporting_form/', start = 0, end = 50000, increment=50000, loop_count=30, df = transform_tri_reporting_form)
+    #transform_main(db_table='tri_reporting_form',table='tri_reporting_form/', start = 3000000, end = 3050000, increment=50000, loop_count=10, df = transform_tri_reporting_form)
     #transform_main(db_table='tri_chem_info',table='tri_chem_info/', start = 0, end = 1000, increment=0, loop_count=1,df = transform_tri_chem_info)
-    #transform_main(db_table='tri_facility_history',table = 'tri_facility_history_2/', start = 50000, end = 75000, increment=25000, loop_count=15, df=transform_tri_facility_history)
-    #transform_main(db_table='tri_form_total',table='tri_form_totals/', start = 590000, end = 600000,increment=10000, loop_count=5, df = transform_tri_form_total)
+    #transform_main(db_table='tri_facility_history',table = 'tri_facility_history_2/', start = 0, end = 50000, increment=50000, loop_count=60, df=transform_tri_facility_history)
+    transform_main(db_table='tri_form_total',table='tri_form_totals/', start = 0, end = 50000,increment=50000, loop_count=50, df = transform_tri_form_total)
     #transform_main(db_table='tri_chem_activity',table='tri_chem_activity/', start = 2950000, end = 3000000, increment=50000 ,loop_count=30, df = transform_tri_chem_activity)        
     #transform_main(db_table = 'tri_facility_db', table='tri_facility_db/', start = 0, end = 50000, increment = 50000, loop_count = 10, df = transform_tri_facility_db)
     #transform_main(db_table = 'tri_facility_npdes', table='tri_facility_npdes/', start = 0, end = 50000, increment=50000, loop_count= 1, df = transform_tri_facility_npdes)
