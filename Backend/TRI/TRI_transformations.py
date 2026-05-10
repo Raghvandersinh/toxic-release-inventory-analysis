@@ -231,12 +231,37 @@ def transform_tri_reporting_form(raw_data):
         import traceback; traceback.print_exc();
         return None
     
+def transform_tri_submission_naics(raw_data):
+    try:
+        df = pd.DataFrame(raw_data)
+        df['doc_ctrl_num'] = df['doc_ctrl_num'].astype(str)
+        df['naics_code'] = df['naics_code'].astype(str)
+        df['industry_code'] = df['industry_code'].astype(str)
+        df['source'] = df['source'].astype(str)
+        return df
+    except Exception as e:
+        print(f'Transformation Failed {e}')
+        import traceback; traceback.print_exc();
+        return None
+    
 def insert_naics_codes():
     df = pd.read_excel('Backend/TRI/naics_codes.xlsx')
     df = df.iloc[:, [1,2]]
     df = df.dropna()
     df = df.rename(columns={df.columns[0]:'naics_code', df.columns[1]:'name'})
+    df['naics_code'] = df['naics_code'].astype(str)
+    df['name'] = df['name'].astype(str)
+    length_to_type = {
+        2: 'Sector',
+        3: 'Subsector',
+        4: 'Industry',
+        5: 'NAICS_industry',
+        6: 'National_industry'
+    }
+    df['type'] = df['naics_code'].str.len().map(length_to_type).fillna('NA')
     print(df.columns.to_list())
+    df.to_sql(name = 'naics_code', con=engine, if_exists='append', index=False)
+
 
 def get_table_object(table_name):
     """
@@ -337,4 +362,6 @@ if __name__ == "__main__":
     #transform_main(db_table = 'tri_facility_npdes', table='tri_facility_npdes/', start = 0, end = 50000, increment=50000, loop_count= 1, df = transform_tri_facility_npdes)
     #transform_main(db_table = 'tri_facility_rcra', table = 'tri_facility_rcra/', start = 0, end = 50000, increment = 50000, loop_count=1, df = transform_tri_facility_rcra)
     #transform_main(db_table = 'tri_facility_uic', table = 'tri_facility_uic/', start = 0, end = 50000, increment = 50000, loop_count=1, df = transform_tri_facility_uic)
-    insert_naics_codes()
+    #insert_naics_codes()
+    transform_main(db_table = 'tri_submission_naics', table = 'tri_submission_naics/', start=3500000, end=3550000, increment=50000, loop_count=20, df = transform_tri_submission_naics)
+    
