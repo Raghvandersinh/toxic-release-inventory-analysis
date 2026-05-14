@@ -129,6 +129,7 @@ def transform_tri_facility_history(raw_data):
         df['epa_standardized_parent'] = df['epa_standardized_parent'].astype(str)
         df['primary_naics'] = df['primary_naics'].astype(str)
         df['create_date'] = pd.to_datetime(df['create_date'])
+        df['reporting_year'] = df['reporting_year'].astype(int)
         return df
         
     except Exception as e:
@@ -225,6 +226,7 @@ def transform_tri_reporting_form(raw_data):
         df['doc_ctrl_num'] = df['doc_ctrl_num'].astype(str)
         df['tri_facility_id'] = df['tri_facility_id'].astype(str)
         df['tri_chem_id'] = df['tri_chem_id'].astype(str)
+        df['reporting_year'] = df['reporting_year'].astype(int)
         return df    
     except Exception as e:
         print(f'Transformation Failed {e}')
@@ -353,7 +355,7 @@ def transform_main(table, start, end, increment, loop_count, db_table, df):
         import traceback; traceback.print_exc();
                     
 if __name__ == "__main__":
-    #transform_main(db_table='tri_reporting_form',table='tri_reporting_form/', start = 3000000, end = 3050000, increment=50000, loop_count=10, df = transform_tri_reporting_form)
+    transform_main(db_table='tri_reporting_form',table='tri_reporting_form/', start = 0, end = 50000, increment=50000, loop_count=80, df = transform_tri_reporting_form)
     #transform_main(db_table='tri_chem_info',table='tri_chem_info/', start = 0, end = 1000, increment=0, loop_count=1,df = transform_tri_chem_info)
     #transform_main(db_table='tri_facility_history',table = 'tri_facility_history_2/', start = 0, end = 50000, increment=50000, loop_count=60, df=transform_tri_facility_history)
     #transform_main(db_table='tri_form_total',table='tri_form_totals/', start = 2500000, end = 2550000,increment=50000, loop_count=50, df = transform_tri_form_total)
@@ -363,5 +365,5 @@ if __name__ == "__main__":
     #transform_main(db_table = 'tri_facility_rcra', table = 'tri_facility_rcra/', start = 0, end = 50000, increment = 50000, loop_count=1, df = transform_tri_facility_rcra)
     #transform_main(db_table = 'tri_facility_uic', table = 'tri_facility_uic/', start = 0, end = 50000, increment = 50000, loop_count=1, df = transform_tri_facility_uic)
     #insert_naics_codes()
-    transform_main(db_table = 'tri_submission_naics', table = 'tri_submission_naics/', start=3500000, end=3550000, increment=50000, loop_count=20, df = transform_tri_submission_naics)
+    #transform_main(db_table = 'tri_submission_naics', table = 'tri_submission_naics/', start=3500000, end=3550000, increment=50000, loop_count=20, df = transform_tri_submission_naics)
     
