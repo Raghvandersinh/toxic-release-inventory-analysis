@@ -59,9 +59,69 @@ def total_waste_througout_from_top_10_facility_chart_generator():
         strokeWidth=0  
     )
 
-    total_waste_throughout_top_10_chart.save('Frontend/total_waste_throughout_top_10.png')
+    total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.png')
 
+def total_waste_througout_from_top_10_facility_chart_generator_interactive():
+    total_waste_throught_from_top_10_df = pd.read_sql(queries["Total_Waste_Throughout_top_10"], con=engine)
 
+    print(total_waste_throught_from_top_10_df.columns.to_list())
+    print(f"DataFrame shape: {total_waste_throught_from_top_10_df.shape}")
+    print(f"DataFrame memory usage: {total_waste_throught_from_top_10_df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+    print(f"Unique names: {total_waste_throught_from_top_10_df['name'].nunique()}")
+
+    selection = alt.selection_point(
+        fields=['name'],
+        bind = 'legend',
+        name = 'facility_select'
+    )
+    total_waste_throughout_top_10_chart = alt.Chart(total_waste_throught_from_top_10_df).mark_line(
+        strokeWidth=2,
+        point=alt.OverlayMarkDef(
+            filled = True,
+            size = 50
+        )
+    ).encode(
+        x=alt.X('create_month:T', 
+                axis=alt.Axis(format='%b %Y', labelAngle=-45, title='Date'),
+                title=None),
+        y=alt.Y('total_release:Q', 
+                axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
+                scale=alt.Scale(zero=False)),  # Don't force y-axis to start at 0
+        color=alt.Color('name:N', 
+                        legend=alt.Legend(title='Facility', orient='bottom', columns=2),
+                        sort='-y'),
+        tooltip=[
+            alt.Tooltip('name:N', title = 'Facility'),
+            alt.Tooltip('create_month:T', title='Date', format= '%B %Y'),
+            alt.Tooltip('total_release:Q', title = 'Total Release', format =',.0f'),
+        ],
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.1)),
+        strokeWidth = alt.condition(
+            alt.selection_point(fields=['name'], toggle=False, nearest =True),
+            alt.value(4),
+            alt.value(2)
+        )
+    ).add_params(
+        selection
+    ).properties(
+        title={
+            'text': 'Top 10 Facilities - Waste Release Trends',
+            'subtitle': 'Monthly aggregated releases in pounds',
+            'fontSize': 16,
+            'anchor': 'start'
+        },
+        width=800,
+        height=400
+    ).configure_axis(
+        grid=True,
+        gridColor='lightgray',
+        gridOpacity=0.5
+    ).configure_view(
+        strokeWidth=0  
+    ).interactive()
+
+    total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.html')
+    
 def total_waste_by_location_throughout_or_After_2020(choice = ""):
     if choice == 'After':
         total_waste_df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine) 
@@ -207,8 +267,12 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
     final_map = background + choropleth
     if choice == 'After':
         final_map.save('Frontend/chart/total_waste_by_counties_2020s.html')
+        final_map.save('Frontend/chart/total_waste_by_counties_2020s.png')
+
     else:
         final_map.save('Frontend/chart/total_waste_by_counties.html')
+        final_map.save('Frontend/chart/total_waste_by_counties.png')
+
 
     
 def map_db_counties_to_fips_code(location_db):
@@ -251,7 +315,9 @@ def map_db_counties_to_fips_code(location_db):
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
 
-total_waste_by_counties_throughout_or_After_2020()
+#total_waste_througout_from_top_10_facility_chart_generator()
+#total_waste_througout_from_top_10_facility_chart_generator_interactive()
+total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

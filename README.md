@@ -4,9 +4,17 @@
 
 This goal of this project is answer questions such as:
 * What are the Top 10 Facility Released The Most Toxic Waste Throughout the Years?
-    ![alt text](Frontend/chart/total_waste_throughout.png)
+    ![alt text](Frontend/chart/total_waste_throughout_top_10.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_throughout_top_10.html]
+
+    Click the HTML for Interactive Mode. 
 * What location has the most toxic relased?
-    ![alt text](Frontend/chart/total_waste_by_counties.html)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties.html]
+    * From(2003 - 2025)
+    ![alt text](Frontend/chart/total_waste_by_counties.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties.html]
+
+    * From(2020 - 2025)
+    ![alt text](Frontend/chart/total_waste_by_counties_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties_2020s.html]
+
+    Click the HTML for Interactive Mode. 
 * What state has the most dangerous toxic?
 * To Be Continued...
 
