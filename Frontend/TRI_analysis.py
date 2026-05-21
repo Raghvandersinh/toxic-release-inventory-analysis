@@ -10,7 +10,7 @@ from us import states
 import requests
 from io import StringIO
 from census import Census
-
+import addfips
 start_time = time.time()
 
 alt.renderers.enable("mimetype")
@@ -147,8 +147,55 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
     else:
         total_waste_df = pd.read_sql(queries["Waste_By_Location"], con=engine)
 
+    total_waste_df = map_db_counties_to_fips_code(location_db=total_waste_df)
     counties = alt.topo_feature(data.us_10m.url, feature = 'counties')
-    counties_waste = total_waste_df.groupby('county', as_index=False)['total_release'].sum()
+    county_releases = total_waste_df.groupby('county_fips').agg({
+        'total_release': 'sum',
+        'county': 'first',
+        'state_name': 'first'
+    }).reset_index()
+    print(county_releases.head())
+    county_releases = county_releases.dropna(subset=['county_fips'])
+    print(county_releases.head())
+    click_select = alt.selection_point(fields=['county_fips'], name='select_county')
+    choropleth = alt.Chart(counties).mark_geoshape().transform_lookup(
+        lookup='id',  # FIPS code in the TopoJSON
+        from_=alt.LookupData(
+            county_releases,
+            key='county_fips',  # Your FIPS column
+            fields=['total_release', 'county', 'state_name']
+        )
+    ).encode(
+        color=alt.Color(
+            'total_release:Q',
+            scale=alt.Scale(scheme='reds', type='symlog', constant=1),  # Log scale for better visualization
+            title='Total Waste Release',
+            legend=alt.Legend(format = '.0f', tickCount=5, titleLimit=500)
+        ),
+        tooltip=[
+            alt.Tooltip('county:N', title='County'),
+            alt.Tooltip('state_name:N', title='State'),
+            alt.Tooltip('total_release:Q', title='Total Release', format=',.0f')
+        ],
+        stroke= alt.condition(
+            click_select,
+            alt.value('yellow'),
+            alt.value('white')
+        ),
+        strokeWidth= alt.condition(
+            click_select,
+            alt.value(2),
+            alt.value(0.5)
+        )
+    ).add_params(
+        click_select
+    ).project(
+        type='albersUsa'
+    ).properties(
+        width=700,
+        height=500,
+        title='Total Waste Release by County'
+    )
     
     background = alt.Chart(counties).mark_geoshape(
         fill = 'lightgray',
@@ -157,23 +204,54 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
         width = 700,
         height = 500
     )
-    
-    background.save('County.png')
-    
+    final_map = background + choropleth
+    if choice == 'After':
+        final_map.save('Frontend/chart/total_waste_by_counties_2020s.html')
+    else:
+        final_map.save('Frontend/chart/total_waste_by_counties.html')
 
-
-def map_db_counties_to_fips_code():
-    location_db = pd.read_sql(queries['Waste_By_Location'], con=engine)
+    
+def map_db_counties_to_fips_code(location_db):
+    print("Starting function...")
+    print(f"Loaded {len(location_db)} rows")
+    
     def safe_state_lookup(abbr):
         result = states.lookup(abbr)
         return result.name if result is not None else pd.NA 
+    
     location_db['state_name'] = location_db['state'].apply(safe_state_lookup)
+    print("State names added")
     
+    af = addfips.AddFIPS()
     
+    # First, get unique county-state combinations to avoid redundant API calls
+    unique_counties = location_db[['county', 'state']].drop_duplicates()
+    print(f"Processing {len(unique_counties)} unique county-state combinations")
     
-# Run it
+    # Create a lookup dictionary for unique combinations
+    county_fips_map = {}
+    for _, row in unique_counties.iterrows():
+        try:
+            county_fips_map[(row['county'], row['state'])] = af.get_county_fips(row['county'], state=row['state'])
+        except Exception as e:
+            print(f"Error looking up {row['county']}, {row['state']}: {e}")
+            county_fips_map[(row['county'], row['state'])] = pd.NA
+    
+    print(f"Created FIPS map with {len(county_fips_map)} entries")
+
+    # Map the FIPS codes back to the original DataFrame
+    location_db['county_fips'] = location_db.apply(
+        lambda row: county_fips_map.get((row['county'], row['state']), pd.NA), 
+        axis=1
+    )
+
+    return location_db
+
+
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
-map_db_counties_to_fips_code()
+
+total_waste_by_counties_throughout_or_After_2020()
+
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")
