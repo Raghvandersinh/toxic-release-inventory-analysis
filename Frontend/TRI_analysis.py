@@ -184,8 +184,8 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
         ),
         strokeWidth= alt.condition(
             click_select,
-            alt.value(0.5),
-            alt.value(0.5)
+            alt.value(0.05),
+            alt.value(0.05)
         )
     ).add_params(
         click_select
