@@ -69,16 +69,25 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     print(f"DataFrame memory usage: {total_waste_throught_from_top_10_df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
     print(f"Unique names: {total_waste_throught_from_top_10_df['name'].nunique()}")
 
+    # Create selection for legend interaction (click to filter)
     selection = alt.selection_point(
         fields=['name'],
-        bind = 'legend',
-        name = 'facility_select'
+        bind='legend',
+        name='facility_select'
     )
+    
+    # Create hover selection for highlighting
+    hover = alt.selection_point(
+        fields=['name'],
+        on='mouseover',
+        name='hover'
+    )
+    
     total_waste_throughout_top_10_chart = alt.Chart(total_waste_throught_from_top_10_df).mark_line(
         strokeWidth=2,
         point=alt.OverlayMarkDef(
-            filled = True,
-            size = 50
+            filled=True,
+            size=50
         )
     ).encode(
         x=alt.X('create_month:T', 
@@ -86,27 +95,26 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
                 title=None),
         y=alt.Y('total_release:Q', 
                 axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
-                scale=alt.Scale(zero=False)),  # Don't force y-axis to start at 0
+                scale=alt.Scale(zero=False)),
         color=alt.Color('name:N', 
-                        legend=alt.Legend(title='Facility', orient='bottom', columns=2),
+                        legend=alt.Legend(title='Facility (click to filter)', orient='bottom', columns=2),
                         sort='-y'),
         tooltip=[
-            alt.Tooltip('name:N', title = 'Facility'),
-            alt.Tooltip('create_month:T', title='Date', format= '%B %Y'),
-            alt.Tooltip('total_release:Q', title = 'Total Release', format =',.0f'),
+            alt.Tooltip('name:N', title='Facility'),
+            alt.Tooltip('create_month:T', title='Date', format='%B %Y'),
+            alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
         ],
+        # Opacity changes based on legend selection
         opacity=alt.condition(selection, alt.value(1), alt.value(0.1)),
-        strokeWidth = alt.condition(
-            alt.selection_point(fields=['name'], toggle=False, nearest =True),
-            alt.value(4),
-            alt.value(2)
-        )
+        # Stroke width changes based on hover
+        strokeWidth=alt.condition(hover, alt.value(4), alt.value(2))
     ).add_params(
-        selection
+        selection,
+        hover  # Add hover parameter
     ).properties(
         title={
             'text': 'Top 10 Facilities - Waste Release Trends',
-            'subtitle': 'Monthly aggregated releases in pounds',
+            'subtitle': 'Click legend to filter • Hover to highlight',
             'fontSize': 16,
             'anchor': 'start'
         },
@@ -121,6 +129,8 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     ).interactive()
 
     total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.html')
+    return total_waste_throughout_top_10_chart
+    
     
 def total_waste_by_location_throughout_or_After_2020(choice = ""):
     if choice == 'After':
@@ -244,8 +254,8 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
         ),
         strokeWidth= alt.condition(
             click_select,
-            alt.value(0.05),
-            alt.value(0.05)
+            alt.value(0.5),
+            alt.value(0.5)
         )
     ).add_params(
         click_select
@@ -311,13 +321,67 @@ def map_db_counties_to_fips_code(location_db):
 
     return location_db
 
+def total_waste_througout_from_top_10_facility_chart_generator_interactive2():
+    total_waste_throught_from_top_10_df = pd.read_sql(queries["Total_Waste_Throughout_top_10"], con=engine)
 
+    # Just use one selection for legend filtering
+    selection = alt.selection_point(
+        fields=['name'],
+        bind='legend',
+        name='facility_select'
+    )
+    
+    total_waste_throughout_top_10_chart = alt.Chart(total_waste_throught_from_top_10_df).mark_line(
+        strokeWidth=2,
+        point=alt.OverlayMarkDef(
+            filled=True,
+            size=50
+        )
+    ).encode(
+        x=alt.X('create_month:T', 
+                axis=alt.Axis(format='%b %Y', labelAngle=-45, title='Date'),
+                title=None),
+        y=alt.Y('total_release:Q', 
+                axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
+                scale=alt.Scale(zero=False)),
+        color=alt.Color('name:N', 
+                        legend=alt.Legend(title='Facility (click to filter)', orient='bottom', columns=2),
+                        sort='-y'),
+        tooltip=[
+            alt.Tooltip('name:N', title='Facility'),
+            alt.Tooltip('create_month:T', title='Date', format='%B %Y'),
+            alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
+        ],
+        # Only use opacity change based on legend selection
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.1))
+    ).add_params(
+        selection
+    ).properties(
+        title={
+            'text': 'Top 10 Facilities - Waste Release Trends',
+            'subtitle': 'Click legend to filter • Hover for details',
+            'fontSize': 16,
+            'anchor': 'start'
+        },
+        width=800,
+        height=400
+    ).configure_axis(
+        grid=True,
+        gridColor='lightgray',
+        gridOpacity=0.5
+    ).configure_view(
+        strokeWidth=0  
+    ).interactive()
+
+    total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.html')
+    
+    return total_waste_throughout_top_10_chart
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
 
 #total_waste_througout_from_top_10_facility_chart_generator()
-#total_waste_througout_from_top_10_facility_chart_generator_interactive()
-total_waste_by_counties_throughout_or_After_2020(choice = 'After')
+#total_waste_througout_from_top_10_facility_chart_generator_interactive2()
+total_waste_by_counties_throughout_or_After_2020()
 
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")
