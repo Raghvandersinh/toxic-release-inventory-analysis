@@ -61,155 +61,65 @@ def total_waste_througout_from_top_10_facility_chart_generator():
 
     total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.png')
 
-def total_waste_througout_from_top_10_facility_chart_generator_interactive():
-    total_waste_throught_from_top_10_df = pd.read_sql(queries["Total_Waste_Throughout_top_10"], con=engine)
 
-    print(total_waste_throught_from_top_10_df.columns.to_list())
-    print(f"DataFrame shape: {total_waste_throught_from_top_10_df.shape}")
-    print(f"DataFrame memory usage: {total_waste_throught_from_top_10_df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-    print(f"Unique names: {total_waste_throught_from_top_10_df['name'].nunique()}")
-
-    # Create selection for legend interaction (click to filter)
-    selection = alt.selection_point(
-        fields=['name'],
-        bind='legend',
-        name='facility_select'
-    )
-    
-    # Create hover selection for highlighting
-    hover = alt.selection_point(
-        fields=['name'],
-        on='mouseover',
-        name='hover'
-    )
-    
-    total_waste_throughout_top_10_chart = alt.Chart(total_waste_throught_from_top_10_df).mark_line(
-        strokeWidth=2,
-        point=alt.OverlayMarkDef(
-            filled=True,
-            size=50
-        )
-    ).encode(
-        x=alt.X('create_month:T', 
-                axis=alt.Axis(format='%b %Y', labelAngle=-45, title='Date'),
-                title=None),
-        y=alt.Y('total_release:Q', 
-                axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
-                scale=alt.Scale(zero=False)),
-        color=alt.Color('name:N', 
-                        legend=alt.Legend(title='Facility (click to filter)', orient='bottom', columns=2),
-                        sort='-y'),
-        tooltip=[
-            alt.Tooltip('name:N', title='Facility'),
-            alt.Tooltip('create_month:T', title='Date', format='%B %Y'),
-            alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
-        ],
-        # Opacity changes based on legend selection
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.1)),
-        # Stroke width changes based on hover
-        strokeWidth=alt.condition(hover, alt.value(4), alt.value(2))
-    ).add_params(
-        selection,
-        hover  # Add hover parameter
-    ).properties(
-        title={
-            'text': 'Top 10 Facilities - Waste Release Trends',
-            'subtitle': 'Click legend to filter • Hover to highlight',
-            'fontSize': 16,
-            'anchor': 'start'
-        },
-        width=800,
-        height=400
-    ).configure_axis(
-        grid=True,
-        gridColor='lightgray',
-        gridOpacity=0.5
-    ).configure_view(
-        strokeWidth=0  
-    ).interactive()
-
-    total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.html')
-    return total_waste_throughout_top_10_chart
-    
-    
-def total_waste_by_location_throughout_or_After_2020(choice = ""):
+def total_waste_by_state_throughout_or_After_2020(choice = ""):
     if choice == 'After':
-        total_waste_df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine) 
+        state_waste_df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine) 
     else:
-        total_waste_df = pd.read_sql(queries["Waste_By_Location"], con=engine)
+        state_waste_df = pd.read_sql(queries["Waste_By_Location"], con=engine)
+    print(state_waste_df.columns.to_list())
+    state_waste_df = state_waste_df.drop(columns = ['city', 'county'])
+    state_waste_df = state_waste_df.groupby('state').agg({'total_release' : 'sum'}).reset_index()
 
+    state_waste_df['state_fips'] = state_waste_df['state'].apply(lambda x:states.lookup(str(x)).fips if states.lookup(str(x)) else pd.NA)
+    state_waste_df['state_name'] = state_waste_df['state_fips'].apply(lambda x:states.lookup(str(x)).name if states.lookup(str(x)) else pd.NA)
+    state_waste_df = state_waste_df.dropna()
+    print(state_waste_df['state_fips'].head())
+    us_states = alt.topo_feature(data.us_10m.url, feature = 'states')
     
-    print("Sample of data:")
-    print(total_waste_df[['state', 'county']].head(10))
-    print(f"\nTotal rows: {len(total_waste_df)}")
-    
-    print(total_waste_df.head(10))    
-    states  = alt.topo_feature(data.us_10m.url, feature = 'states')
-    state_waste = total_waste_df.groupby('state', as_index=False)['total_release'].sum()
-    print('\nState Waste:', state_waste.head())
-    # Use the us library to get state names and map IDs
-    def get_state_info(abbrev):
-        state = states.lookup(abbrev)
-        if state:
-            return pd.Series({
-                'state_name': state.name,
-                # The topo feature uses the FIPS code as the ID (but as string without leading zero for single digits)
-                'id': int(state.fips)  # Convert FIPS to int to match topo feature format
-            })
-        return pd.Series({'state_name': abbrev, 'id': None})
-    
-    # Apply the mapping
-    state_info = state_waste['state'].apply(get_state_info)
-    print(f'\nState Info: {state_info}')
-    state_waste = pd.concat([state_waste, state_info], axis=1)
-    print(f'\nState Waste Updated: {state_waste}')
-
-    # Check for unmapped states
-    unmapped = state_waste[state_waste['id'].isna()]
-    if len(unmapped) > 0:
-        print(f"Warning: Could not map IDs for states: {unmapped['state'].tolist()}")
-        # Remove unmapped states
-        state_waste = state_waste.dropna(subset=['id'])
-    
-    # Convert id to integer for proper matching
-    state_waste['id'] = state_waste['id'].astype(int)
-    
-    background = alt.Chart(states).mark_geoshape(
-        fill = 'lightgray',
+    background = alt.Chart(us_states).mark_geoshape(
+        fill='lightgray',
         stroke = 'white'
     ).project('albersUsa').properties(
         width = 700,
         height = 500
     )
     
-    waste_map = alt.Chart(states).mark_geoshape(
-        stroke = 'white'
-    ).project(
-        'albersUsa'
-    ).encode(
-        color = alt.Color('total_release:Q',
-                          scale = alt.Scale(scheme = 'reds', type = 'log'),
-                          title='Total Waste Released' if choice != 'After' else 'Total Waste Released 2020s'),
-        tooltip=[
-            alt.Tooltip('state_name:N', title='State'),
-            alt.Tooltip('total_release:Q', title='Total Waste', format=',.0f')
-        ]
+    point_hover = alt.selection_point(fields=['state_fips'], on='pointerover', nearest=True, name='Select State')
+    choropelth = alt.Chart(us_states).mark_geoshape().encode(
+        color = 'total_release:Q',
+        tooltip= [
+            alt.Tooltip('state_name:N', title = "State"),
+            alt.Tooltip('total_release:Q', title = 'Total Waste Released')
+        ],
+        stroke= alt.condition(
+            point_hover,
+            alt.value('yellow'),
+            alt.value('white')
+        ),
+        strokeWidth= alt.condition(
+            point_hover,
+            alt.value(2),
+            alt.value(0.5)
+        )
     ).transform_lookup(
         lookup = 'id',
-        from_=alt.LookupData(state_waste, 'id', ['total_release', 'state_name'])
+        from_ = alt.LookupData(state_waste_df, key='state_fips', fields = ['total_release', 'state_name'])
     ).properties(
         width = 700,
-        height=500,
-        title = 'Waste Release By State' if choice != 'After' else "Waste Release By State 2020s"
+        height = 500
+    ).project('albersUsa'
+    ).add_params(
+        point_hover
     )
     
-    chart = background + waste_map
+    final_map = background + choropelth
     if choice == 'After':
-        chart.save('Frontend/chart/total_waste_By_States_2020s.png')
+        final_map.save('Frontend/chart/total_waste_by_state_2020s.png')
+        final_map.save('Frontend/chart/total_waste_by_state_2020s.html')
     else:
-        chart.save('Frontend/chart/total_waste_By_States.png')
-    
-    return chart
+        final_map.save('Frontend/chart/total_waste_by_state.png')
+        final_map.save('Frontend/chart/total_waste_by_state.html')
 
 def total_waste_by_counties_throughout_or_After_2020(choice = ""):
     if choice == 'After':
@@ -283,7 +193,6 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
         final_map.save('Frontend/chart/total_waste_by_counties.html')
         final_map.save('Frontend/chart/total_waste_by_counties.png')
 
-
     
 def map_db_counties_to_fips_code(location_db):
     print("Starting function...")
@@ -321,7 +230,7 @@ def map_db_counties_to_fips_code(location_db):
 
     return location_db
 
-def total_waste_througout_from_top_10_facility_chart_generator_interactive2():
+def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     total_waste_throught_from_top_10_df = pd.read_sql(queries["Total_Waste_Throughout_top_10"], con=engine)
 
     # Just use one selection for legend filtering
@@ -381,7 +290,8 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive2():
 
 #total_waste_througout_from_top_10_facility_chart_generator()
 #total_waste_througout_from_top_10_facility_chart_generator_interactive2()
-total_waste_by_counties_throughout_or_After_2020()
+#total_waste_by_counties_throughout_or_After_2020()
 
+total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

@@ -8,12 +8,16 @@ This goal of this project is answer questions such as:
 
     Click the HTML for Interactive Mode. 
 * What location has the most toxic relased?
-    * From(2003 - 2025)
-    ![alt text](Frontend/chart/total_waste_by_counties.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties.html]
-
-    * From(2020 - 2025)
+    * From(2003 - 2025) 
+        * By County:
+        ![alt text](Frontend/chart/total_waste_by_counties.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties.html]
+        
+        * By State: 
+        ![alt text](Frontend/chart/total_waste_by_state.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_state.html]
+    * From(2020 - 2025) By County
     ![alt text](Frontend/chart/total_waste_by_counties_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties_2020s.html]
 
+    
     Click the HTML for Interactive Mode. 
 * What state has the most dangerous toxic?
 * To Be Continued...
