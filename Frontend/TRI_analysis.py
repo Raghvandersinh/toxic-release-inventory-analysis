@@ -74,9 +74,17 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
     state_waste_df['state_fips'] = state_waste_df['state'].apply(lambda x:states.lookup(str(x)).fips if states.lookup(str(x)) else pd.NA)
     state_waste_df['state_name'] = state_waste_df['state_fips'].apply(lambda x:states.lookup(str(x)).name if states.lookup(str(x)) else pd.NA)
     state_waste_df = state_waste_df.dropna()
-    print(state_waste_df['state_fips'].head())
     us_states = alt.topo_feature(data.us_10m.url, feature = 'states')
     
+    print("State waste df sample:")
+    print(state_waste_df[['state_fips', 'state_name', 'total_release']].head(10))
+    print(f"\nFIPS dtype: {state_waste_df['state_fips'].dtype}")
+    print(f"FIPS values: {state_waste_df['state_fips'].tolist()[:10]}")
+
+    # Check if total_release has the same value everywhere
+    print(f"\nUnique total_release values: {state_waste_df['total_release'].nunique()}")
+    print(f"Total sum: {state_waste_df['total_release'].sum()}")
+        
     background = alt.Chart(us_states).mark_geoshape(
         fill='lightgray',
         stroke = 'white'
@@ -100,10 +108,15 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
                  scale = alt.Scale(scheme = 'reds', type = 'symlog', constant = 1),
                  title = "Total Waste Release",
                  legend = alt.Legend(format = '.0f', tickCount=5, titleLimit=500)),
-        tooltip= [
-            alt.Tooltip('state_name:N', title = "State:"),
-            alt.Tooltip('total_release:Q', title = 'Total Waste:')
+        
+        tooltip=[
+        'state_name:N',
+        alt.Tooltip('total_release:Q', format=',.0f')
         ],
+        # tooltip= [
+        #     alt.Tooltip('state_name:N', title = "State:"),
+        #     alt.Tooltip('total_release:Q', title = 'Total Waste:')
+        # ],
         stroke= alt.condition(
             point_hover,
             alt.value('yellow'),
