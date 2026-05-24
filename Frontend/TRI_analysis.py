@@ -86,7 +86,9 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
     )
     
     point_hover = alt.selection_point(fields=['state_fips'], on='pointerover', nearest=True, name='Select State')
-    choropelth = alt.Chart(us_states).mark_geoshape(
+    choropelth = alt.Chart(us_states).mark_geoshape().transform_lookup(
+        lookup = 'id',
+        from_ = alt.LookupData(state_waste_df, key='state_fips', fields = ['total_release', 'state_name'])
     ).properties(
         width = 700,
         height = 500
@@ -94,7 +96,10 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
     ).add_params(
         point_hover
     ).encode(
-        color = 'total_release:Q',
+        color = alt.Color('total_release:Q',
+                 scale = alt.Scale(scheme = 'reds', type = 'symlog', constant = 1),
+                 title = "Total Waste Release",
+                 legend = alt.Legend(format = '.0f', tickCount=5, titleLimit=500)),
         tooltip= [
             alt.Tooltip('state_name:N', title = "State:"),
             alt.Tooltip('total_release:Q', title = 'Total Waste:')
@@ -109,9 +114,6 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
             alt.value(2),
             alt.value(0.5)
         )
-    ).transform_lookup(
-        lookup = 'id',
-        from_ = alt.LookupData(state_waste_df, key='state_fips', fields = ['total_release', 'state_name'])
     )
     
     final_map = background + choropelth
@@ -149,7 +151,7 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
     ).encode(
         color=alt.Color(
             'total_release:Q',
-            scale=alt.Scale(scheme='reds', type='symlog', constant=1),  # Log scale for better visualization
+            scale=alt.Scale(scheme='reds', type='symlog', constant=1),  
             title='Total Waste Release',
             legend=alt.Legend(format = '.0f', tickCount=5, titleLimit=500)
         ),
