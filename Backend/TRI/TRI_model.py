@@ -21,7 +21,6 @@ class Metal_Indicator(enum.Enum):
 # ORM models
 class TRIReportingForm(Base):
     __tablename__ = 'tri_reporting_form'
-    
     doc_ctrl_num =  Column(String(13), primary_key=True)
     tri_facility_id = Column(String(15), nullable=False, index=True)
     tri_chem_id = Column(String(15), ForeignKey('tri_chem_info.tri_chem_id'), index=True)

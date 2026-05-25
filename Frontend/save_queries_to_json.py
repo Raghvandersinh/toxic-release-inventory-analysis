@@ -2,25 +2,28 @@ import json
 
 queries = {
     "Waste_By_Location":
-    """
+ """
     WITH release_totals AS (
-        SELECT 
-            trf.tri_facility_id,
-            SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS Total_Release
-        FROM tri_form_total tft
-        JOIN tri_reporting_form trf ON tft.doc_ctrl_num = trf.doc_ctrl_num
-        GROUP BY trf.tri_facility_id
+            SELECT 
+                trf.tri_facility_id,
+                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS Total_Release
+            FROM tri_form_total tft
+            JOIN tri_reporting_form trf ON tft.doc_ctrl_num = trf.doc_ctrl_num
+            GROUP BY trf.tri_facility_id
+        ),
+    merge_release_totals AS(
+        SELECT
+            tfh.city,
+            MAX(tfh.county) as county,
+            tfh.state,
+            rt.Total_Release
+        FROM release_totals rt
+        JOIN tri_facility_history tfh ON rt.tri_facility_id = tfh.tri_facility_id
+        GROUP BY tfh.city, tfh.state, rt.Total_Release
+        ORDER BY rt.Total_Release DESC
     )
-    SELECT
-        tfh.city,
-        tfh.county,
-        tfh.state,
-        ROUND(SUM(rt.Total_Release), 2) AS Total_Release
-    FROM release_totals rt
-    JOIN tri_facility_history tfh ON rt.tri_facility_id = tfh.tri_facility_id
-    GROUP BY tfh.city, tfh.county, tfh.state
-    ORDER BY Total_Release DESC;
-    """,
+    Select * From merge_release_totals;
+""",
     
     "Waste_By_Location_2020s": 
     """
@@ -29,16 +32,24 @@ queries = {
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             Where tfh.create_date >= '2020-01-01'
+        ),
+        total_waste_after_2020 AS(
+            Select trf.doc_ctrl_num,
+            ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC),2) AS Total_Release
+            From tri_reporting_form trf
+            Join tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
+            Where trf.reporting_year >= 2020
+            Group BY trf.doc_ctrl_num
         )
         Select
         ra.city,
         ra.county,
         ra.state,
-        ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC)) AS total_release
+        SUM(twa.Total_Release) AS Total_Release
         FROM reports_after_2020 ra 
-        JOIN tri_form_total tft ON ra.doc_ctrl_num = tft.doc_ctrl_num
-        GROUP BY ra.state,ra.county,ra.city
-        Order By total_release DESC;
+        JOIN total_waste_after_2020 twa ON ra.doc_ctrl_num = twa.doc_ctrl_num
+        Group BY ra.city, ra.county, ra.state
+        Order By Total_Release DESC;
     """,
 
     "Total_Waste_Throughout_top_10": """
