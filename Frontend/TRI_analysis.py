@@ -69,10 +69,15 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
         state_waste_df = pd.read_sql(queries["Waste_By_Location"], con=engine)
     print(state_waste_df.columns.to_list())
     state_waste_df = state_waste_df.drop(columns = ['city', 'county'])
-    state_waste_df = state_waste_df.groupby('state').agg({'total_release' : 'sum'}).reset_index()
+    state_waste_df = state_waste_df.drop_duplicates()
+
+    state_waste_df = state_waste_df.groupby('state')['total_release'].sum().reset_index()
 
     state_waste_df['state_fips'] = state_waste_df['state'].apply(lambda x:states.lookup(str(x)).fips if states.lookup(str(x)) else pd.NA)
     state_waste_df['state_name'] = state_waste_df['state_fips'].apply(lambda x:states.lookup(str(x)).name if states.lookup(str(x)) else pd.NA)
+    with pd.option_context('display.max_rows', None):
+        print(state_waste_df)
+    
     state_waste_df = state_waste_df.dropna()
     us_states = alt.topo_feature(data.us_10m.url, feature = 'states')
     
