@@ -55,36 +55,40 @@ queries = {
     """,
 
     "Total_Waste_Throughout_top_10": """
-        WITH release_totals AS (
+        WITH latest_facility_location AS (
+            SELECT DISTINCT ON (tri_facility_id) 
+                tri_facility_id,
+                epa_standardized_parent
+            FROM tri_facility_history
+            ORDER BY tri_facility_id, create_date DESC
+        ),
+        facility_monthly_totals AS (
             SELECT 
                 trf.tri_facility_id,
-                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS Total_Release
-            FROM tri_form_total tft
-            JOIN tri_reporting_form trf ON tft.doc_ctrl_num = trf.doc_ctrl_num
-            GROUP BY trf.tri_facility_id
+                trf.reporting_year,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release
+            FROM tri_reporting_form trf
+            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY trf.tri_facility_id, trf.reporting_year
         ),
-        
         top_10_facilities AS (
             SELECT 
-                tfh.tri_facility_id,
-                MAX(tfh.name) AS name,
-                SUM(rt.Total_Release) AS total_facility_release
-            FROM release_totals rt
-            JOIN tri_facility_history tfh ON rt.tri_facility_id = tfh.tri_facility_id
-            GROUP BY tfh.tri_facility_id
-            ORDER BY total_facility_release DESC
+                trf.tri_facility_id
+            FROM tri_reporting_form trf
+            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY trf.tri_facility_id
+            ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC
             LIMIT 10
         )
-        
-        SELECT
-            t10.name,
-            ROUND(SUM(rt.Total_Release), 2) AS total_release,
-            DATE_TRUNC('month', tfh.create_date) AS create_month
-        FROM top_10_facilities t10
-        JOIN tri_facility_history tfh ON t10.tri_facility_id = tfh.tri_facility_id
-        JOIN release_totals rt ON tfh.tri_facility_id = rt.tri_facility_id
-        GROUP BY t10.name, DATE_TRUNC('month', tfh.create_date)
-        ORDER BY create_month, name;
+        SELECT 
+            lfl.epa_standardized_parent AS name,
+            fmt.reporting_year,
+            ROUND(SUM(fmt.total_release), 2) AS total_release
+        FROM facility_monthly_totals fmt
+        JOIN top_10_facilities t10 ON fmt.tri_facility_id = t10.tri_facility_id
+        JOIN latest_facility_location lfl ON fmt.tri_facility_id = lfl.tri_facility_id
+        GROUP BY lfl.epa_standardized_parent, fmt.reporting_year
+        ORDER BY fmt.reporting_year, lfl.epa_standardized_parent;
     """
 }
 

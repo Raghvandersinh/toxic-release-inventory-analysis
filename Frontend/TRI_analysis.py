@@ -33,8 +33,8 @@ def total_waste_througout_from_top_10_facility_chart_generator():
         strokeWidth=2,
         point=False  # Remove points for cleaner lines
     ).encode(
-        x=alt.X('create_month:T', 
-                axis=alt.Axis(format='%b %Y', labelAngle=-45, title='Date'),
+        x=alt.X('reporting_year:T', 
+                axis=alt.Axis(format='%Y', labelAngle=-45, title='Date'),
                 title=None),
         y=alt.Y('total_release:Q', 
                 axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
@@ -263,8 +263,8 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
             size=50
         )
     ).encode(
-        x=alt.X('create_month:T', 
-                axis=alt.Axis(format='%b %Y', labelAngle=-45, title='Date'),
+        x=alt.X('reporting_year:T', 
+                axis=alt.Axis(format='%Y', labelAngle=-45, title='Date'),
                 title=None),
         y=alt.Y('total_release:Q', 
                 axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
@@ -274,7 +274,7 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
                         sort='-y'),
         tooltip=[
             alt.Tooltip('name:N', title='Facility'),
-            alt.Tooltip('create_month:T', title='Date', format='%B %Y'),
+            alt.Tooltip('create_month:T', title='Date', format='%Y'),
             alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
         ],
         # Only use opacity change based on legend selection
@@ -301,13 +301,16 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.html')
     
     return total_waste_throughout_top_10_chart
+
+
+
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
 
-#total_waste_througout_from_top_10_facility_chart_generator()
-#total_waste_througout_from_top_10_facility_chart_generator_interactive2()
+total_waste_througout_from_top_10_facility_chart_generator()
+total_waste_througout_from_top_10_facility_chart_generator_interactive()
 #total_waste_by_counties_throughout_or_After_2020()
 
-total_waste_by_state_throughout_or_After_2020()
+#total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")
