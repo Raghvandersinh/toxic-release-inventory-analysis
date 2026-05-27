@@ -89,7 +89,58 @@ queries = {
         JOIN latest_facility_location lfl ON fmt.tri_facility_id = lfl.tri_facility_id
         GROUP BY lfl.epa_standardized_parent, fmt.reporting_year
         ORDER BY fmt.reporting_year, lfl.epa_standardized_parent;
-    """
+    """,
+    "Total_Waste_Top_10_Vs_Rest_Facilities":
+        """
+        WITH latest_facility_location AS (
+            SELECT DISTINCT ON (tri_facility_id) 
+                tri_facility_id,
+                epa_standardized_parent
+            FROM tri_facility_history
+            ORDER BY tri_facility_id, create_date DESC
+        ),
+        ranked_facilities AS (
+            SELECT 
+                trf.tri_facility_id,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release,
+                RANK() OVER (ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC) AS rank
+            FROM tri_reporting_form trf
+            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY trf.tri_facility_id
+        ),
+        total_waste AS (
+            SELECT SUM(total_release) AS grand_total
+            FROM ranked_facilities
+        )
+        SELECT 
+            'Top 10 Facilities' AS category,
+            COUNT(*) AS num_facilities,
+            ROUND(SUM(rf.total_release), 2) AS total_release,
+            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100, 2) AS percentage_of_total
+        FROM ranked_facilities rf
+        CROSS JOIN total_waste tw
+        WHERE rf.rank <= 10
+
+        UNION ALL
+
+        SELECT 
+            'All Other Facilities' AS category,
+            COUNT(*) AS num_facilities,
+            ROUND(SUM(rf.total_release), 2) AS total_release,
+            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100, 2) AS percentage_of_total
+        FROM ranked_facilities rf
+        CROSS JOIN total_waste tw
+        WHERE rf.rank > 10
+
+        UNION ALL
+
+        SELECT 
+            'TOTAL' AS category,
+            COUNT(*) AS num_facilities,
+            ROUND(SUM(rf.total_release), 2) AS total_release,
+            100.00 AS percentage_of_total
+        FROM ranked_facilities rf;
+        """
 }
 
 for x in queries:

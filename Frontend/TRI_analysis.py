@@ -274,7 +274,7 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
                         sort='-y'),
         tooltip=[
             alt.Tooltip('name:N', title='Facility'),
-            alt.Tooltip('create_month:T', title='Date', format='%Y'),
+            alt.Tooltip('reporting_year:T', title='Date', format='%Y'),
             alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
         ],
         # Only use opacity change based on legend selection
@@ -307,9 +307,9 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
 
-total_waste_througout_from_top_10_facility_chart_generator()
-total_waste_througout_from_top_10_facility_chart_generator_interactive()
-#total_waste_by_counties_throughout_or_After_2020()
+#total_waste_througout_from_top_10_facility_chart_generator()
+#total_waste_througout_from_top_10_facility_chart_generator_interactive()
+total_waste_by_counties_throughout_or_After_2020()
 
 #total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
