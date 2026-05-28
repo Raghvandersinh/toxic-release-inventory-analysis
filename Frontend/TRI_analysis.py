@@ -63,6 +63,7 @@ def total_waste_througout_from_top_10_facility_chart_generator():
 
 
 def total_waste_by_state_throughout_or_After_2020(choice = ""):
+    
     if choice == 'After':
         state_waste_df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine) 
     else:
@@ -71,25 +72,46 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
     state_waste_df = state_waste_df.drop(columns = ['city', 'county'])
     state_waste_df = state_waste_df.drop_duplicates()
 
-    state_waste_df = state_waste_df.groupby('state')['total_release'].sum().reset_index()
+    state_waste_df = state_waste_df.groupby('state').agg(
+        {
+            'total_release': 'sum',
+            'total_land_release':'sum',
+            'total_water_release':'sum',
+            'total_air_release':'sum'
+        }
+    ).reset_index()
 
     state_waste_df['state_fips'] = state_waste_df['state'].apply(lambda x:states.lookup(str(x)).fips if states.lookup(str(x)) else pd.NA)
     state_waste_df['state_name'] = state_waste_df['state_fips'].apply(lambda x:states.lookup(str(x)).name if states.lookup(str(x)) else pd.NA)
-    with pd.option_context('display.max_rows', None):
-        print(state_waste_df)
-    
+
     state_waste_df = state_waste_df.dropna()
+    
+    # Ensure state_fips is properly formatted as string
+    state_waste_df['state_fips'] = state_waste_df['state_fips'].astype(str).str.zfill(2)
+    
     us_states = alt.topo_feature(data.us_10m.url, feature = 'states')
     
     print("State waste df sample:")
-    print(state_waste_df[['state_fips', 'state_name', 'total_release']].head(10))
+    print(state_waste_df.head(10))
     print(f"\nFIPS dtype: {state_waste_df['state_fips'].dtype}")
     print(f"FIPS values: {state_waste_df['state_fips'].tolist()[:10]}")
 
     # Check if total_release has the same value everywhere
     print(f"\nUnique total_release values: {state_waste_df['total_release'].nunique()}")
     print(f"Total sum: {state_waste_df['total_release'].sum()}")
-        
+    
+    # Prepare bar data
+    bar_data = state_waste_df.melt(
+        id_vars = ['state', 'state_fips', 'state_name', 'total_release'],
+        value_vars= ['total_land_release', 'total_water_release', 'total_air_release'],
+        var_name = 'release_type',
+        value_name= 'release_amount(lbs)'
+    )
+    
+    bar_data['release_type'] = bar_data['release_type'].str.replace('total_','').str.replace('_release', '').str.title()
+    
+    point_hover = alt.selection_point(fields=['state_fips'], on='pointerover', empty=False)    
+
     background = alt.Chart(us_states).mark_geoshape(
         fill='lightgray',
         stroke = 'white'
@@ -98,10 +120,10 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
         height = 500
     )
     
-    point_hover = alt.selection_point(fields=['id'], on='pointerover', empty=False)    
-    choropelth = alt.Chart(us_states).mark_geoshape().transform_lookup(
+    choropleth = alt.Chart(us_states).mark_geoshape().transform_lookup(
         lookup = 'id',
-        from_ = alt.LookupData(state_waste_df, key='state_fips', fields = ['total_release', 'state_name'])
+        from_ = alt.LookupData(state_waste_df, key='state_fips', 
+                              fields = ['total_release', 'state_name', 'state_fips'])
     ).properties(
         width = 700,
         height = 500
@@ -115,7 +137,7 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
                  legend = alt.Legend(format = '.0f', tickCount=5, titleLimit=500)),
         tooltip= [
             alt.Tooltip('state_name:N', title = "State:"),
-            alt.Tooltip('total_release:Q', title = 'Total Waste:')
+            alt.Tooltip('total_release:Q', title = 'Total Waste:', format=',.0f')
         ],
         stroke= alt.condition(
             point_hover,
@@ -129,7 +151,40 @@ def total_waste_by_state_throughout_or_After_2020(choice = ""):
         )
     )
     
-    final_map = background + choropelth
+
+    bars = alt.Chart(bar_data).mark_bar().encode(
+        y = alt.Y('release_type:N', 
+                  title = None, 
+                  sort = ['Air', 'Land', 'Water'],
+                  axis=alt.Axis(labelFontSize=12)),
+        x = alt.X('release_amount(lbs):Q', 
+                  title = 'Release Amount (lbs)', 
+                  axis = alt.Axis(format='.1e', labelFontSize=10)),
+        color = alt.Color('release_type:N',
+                          scale = alt.Scale(domain=['Air', 'Land', 'Water'],
+                                            range=['#87CEEB', '#8B4513', '#4682B4']),
+                          legend = None),
+        tooltip= [
+            alt.Tooltip('release_type:N', title ='Type: '),
+            alt.Tooltip('release_amount(lbs):Q', title = 'Amount:', format = ',.0f')
+        ]
+    ).properties(
+        width = 300,
+        height = 200,
+        title = 'Release Breakdown by Type'  
+    ).transform_filter(
+        point_hover
+    )
+    
+    final_map = alt.hconcat(
+        background + choropleth, 
+        bars
+    ).resolve_legend(
+        color='independent'
+    ).configure_concat(
+        spacing=20
+    )
+    
     if choice == 'After':
         final_map.save('Frontend/chart/total_waste_by_state_2020s.png')
         final_map.save('Frontend/chart/total_waste_by_state_2020s.html')
@@ -302,15 +357,15 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     
     return total_waste_throughout_top_10_chart
 
-
+#def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 
 #total_waste_by_location_throughout_or_After_2020(choice = 'After')
 #total_waste_by_counties_throughout_or_After_2020()
 
 #total_waste_througout_from_top_10_facility_chart_generator()
 #total_waste_througout_from_top_10_facility_chart_generator_interactive()
-total_waste_by_counties_throughout_or_After_2020()
+#total_waste_by_counties_throughout_or_After_2020()
 
-#total_waste_by_state_throughout_or_After_2020()
+total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

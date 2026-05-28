@@ -10,7 +10,10 @@ queries = {
                 tfh.state,
                 trf.doc_ctrl_num,
                 trf.reporting_year,
-                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release
+                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
+                ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
+                ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
+                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
@@ -21,7 +24,10 @@ queries = {
             city,
             county,
             state,
-            SUM(total_release) AS total_release
+            SUM(total_release) AS total_release,
+            SUM(total_land_release) AS total_land_release,
+            SUM(total_water_release) AS total_water_release,
+            SUM(total_air_release) AS total_air_release
         FROM waste_data
         GROUP BY city, county, state
         ORDER BY total_release DESC;
@@ -36,7 +42,10 @@ queries = {
                 tfh.state,
                 trf.doc_ctrl_num,
                 trf.reporting_year,
-                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release
+                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
+                ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
+                ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
+                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
@@ -48,7 +57,10 @@ queries = {
             city,
             county,
             state,
-            SUM(total_release) AS total_release
+            SUM(total_release) AS total_release,
+            SUM(total_land_release) AS total_land_release,
+            SUM(total_water_release) AS total_water_release,
+            SUM(total_air_release) AS total_air_release
         FROM waste_data
         GROUP BY city, county, state
         ORDER BY total_release DESC;
