@@ -25,9 +25,11 @@ class TRIReportingForm(Base):
     tri_facility_id = Column(String(15), nullable=False, index=True)
     tri_chem_id = Column(String(15), ForeignKey('tri_chem_info.tri_chem_id'), index=True)
     reporting_year = Column(Integer)
+    
 class TriChemInfo(Base):
     __tablename__ = 'tri_chem_info'
     tri_chem_id = Column(String(15), primary_key=True)
+    chem_name = Column(String(750))
     caac_ind = Column(Boolean)
     carc_ind = Column(Boolean)
     feds_ind = Column(Boolean)

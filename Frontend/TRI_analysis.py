@@ -200,46 +200,79 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
 
     total_waste_df = map_db_counties_to_fips_code(location_db=total_waste_df)
     counties = alt.topo_feature(data.us_10m.url, feature = 'counties')
+    
+    # County-level aggregation with all release types
     county_releases = total_waste_df.groupby('county_fips').agg({
         'total_release': 'sum',
+        'total_land_release': 'sum',
+        'total_water_release': 'sum',
+        'total_air_release': 'sum',
         'county': 'first',
         'state_name': 'first'
     }).reset_index()
-    print(county_releases.head())
+    
     county_releases = county_releases.dropna(subset=['county_fips'])
+    
+    # Ensure county_fips is properly formatted as string
+    county_releases['county_fips'] = county_releases['county_fips'].astype(str).str.zfill(5)
+    
     print(county_releases.head())
-    click_select = alt.selection_point(fields=['county_fips'], name='select_county')
+    
+    # Prepare bar data for the breakdown chart
+    bar_data = county_releases.melt(
+        id_vars=['county_fips', 'county', 'state_name', 'total_release'],
+        value_vars=['total_land_release', 'total_water_release', 'total_air_release'],
+        var_name='release_type',
+        value_name='release_amount(lbs)'
+    )
+    
+    bar_data['release_type'] = bar_data['release_type'].str.replace('total_','').str.replace('_release', '').str.title()
+    
+    # Create selection for hover interaction
+    point_hover = alt.selection_point(fields=['county_fips'], on='pointerover', empty=False)
+    
+    # Background map
+    background = alt.Chart(counties).mark_geoshape(
+        fill='lightgray',
+        stroke='white'
+    ).project('albersUsa').properties(
+        width=700,
+        height=500
+    )
+    
+    # Choropleth map
     choropleth = alt.Chart(counties).mark_geoshape().transform_lookup(
         lookup='id',  # FIPS code in the TopoJSON
         from_=alt.LookupData(
             county_releases,
             key='county_fips',  # Your FIPS column
-            fields=['total_release', 'county', 'state_name']
+            fields=['total_release', 'county', 'state_name', 'county_fips', 
+                   'total_land_release', 'total_water_release', 'total_air_release']
         )
     ).encode(
         color=alt.Color(
             'total_release:Q',
             scale=alt.Scale(scheme='reds', type='symlog', constant=1),  
             title='Total Waste Release',
-            legend=alt.Legend(format = '.0f', tickCount=5, titleLimit=500)
+            legend=alt.Legend(format='.0f', tickCount=5, titleLimit=500)
         ),
         tooltip=[
             alt.Tooltip('county:N', title='County'),
             alt.Tooltip('state_name:N', title='State'),
             alt.Tooltip('total_release:Q', title='Total Release', format=',.0f')
         ],
-        stroke= alt.condition(
-            click_select,
+        stroke=alt.condition(
+            point_hover,
             alt.value('yellow'),
             alt.value('white')
         ),
-        strokeWidth= alt.condition(
-            click_select,
-            alt.value(0.5),
+        strokeWidth=alt.condition(
+            point_hover,
+            alt.value(2),
             alt.value(0.5)
         )
     ).add_params(
-        click_select
+        point_hover
     ).project(
         type='albersUsa'
     ).properties(
@@ -248,22 +281,47 @@ def total_waste_by_counties_throughout_or_After_2020(choice = ""):
         title='Total Waste Release by County'
     )
     
-    background = alt.Chart(counties).mark_geoshape(
-        fill = 'lightgray',
-        stroke = 'white'
-    ).project('albersUsa').properties(
-        width = 700,
-        height = 500
+    # Horizontal bar chart for release breakdown
+    bars = alt.Chart(bar_data).mark_bar().encode(
+        y=alt.Y('release_type:N', 
+                title=None, 
+                sort=['Air', 'Land', 'Water'],
+                axis=alt.Axis(labelFontSize=12)),
+        x=alt.X('release_amount(lbs):Q', 
+                title='Release Amount (lbs)', 
+                axis=alt.Axis(format='.1e', labelFontSize=10)),
+        color=alt.Color('release_type:N',
+                        scale=alt.Scale(domain=['Air', 'Land', 'Water'],
+                                      range=['#87CEEB', '#8B4513', '#4682B4']),
+                        legend=None),
+        tooltip=[
+            alt.Tooltip('release_type:N', title='Type: '),
+            alt.Tooltip('release_amount(lbs):Q', title='Amount:', format=',.0f')
+        ]
+    ).properties(
+        width=300,
+        height=200,
+        title='Release Breakdown by Type'
+    ).transform_filter(
+        point_hover
     )
-    final_map = background + choropleth
+    
+    # Combine map and bar chart
+    final_map = alt.hconcat(
+        background + choropleth, 
+        bars
+    ).resolve_legend(
+        color='independent'
+    ).configure_concat(
+        spacing=20
+    )
+    
     if choice == 'After':
         final_map.save('Frontend/chart/total_waste_by_counties_2020s.html')
         final_map.save('Frontend/chart/total_waste_by_counties_2020s.png')
-
     else:
         final_map.save('Frontend/chart/total_waste_by_counties.html')
         final_map.save('Frontend/chart/total_waste_by_counties.png')
-
     
 def map_db_counties_to_fips_code(location_db):
     print("Starting function...")
@@ -359,13 +417,12 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
 
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 
-#total_waste_by_location_throughout_or_After_2020(choice = 'After')
-#total_waste_by_counties_throughout_or_After_2020()
+total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 
 #total_waste_througout_from_top_10_facility_chart_generator()
 #total_waste_througout_from_top_10_facility_chart_generator_interactive()
 #total_waste_by_counties_throughout_or_After_2020()
 
-total_waste_by_state_throughout_or_After_2020()
+#total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

@@ -152,7 +152,12 @@ queries = {
             ROUND(SUM(rf.total_release), 2) AS total_release,
             100.00 AS percentage_of_total
         FROM ranked_facilities rf;
-        """
+        """,
+        "Chemical_Info":{
+            """
+            Select trf.doc_ctrl_num, tci.chem_name, 
+            """
+        }
 }
 
 for x in queries:
