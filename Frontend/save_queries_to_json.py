@@ -10,6 +10,7 @@ queries = {
                 tfh.state,
                 trf.doc_ctrl_num,
                 trf.reporting_year,
+                trf.tri_chem_id,
                 ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
                 ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
                 ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
@@ -17,17 +18,20 @@ queries = {
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
-            GROUP BY tfh.city, tfh.county, tfh.state, trf.doc_ctrl_num, trf.reporting_year
+            GROUP BY tfh.city, tfh.county, tfh.state, trf.doc_ctrl_num, trf.reporting_year, trf.tri_chem_id
             Order By total_release DESC
         )
         SELECT 
             city,
             county,
             state,
+            COUNT(DISTINCT tri_chem_id) AS unique_chemical_count,
             SUM(total_release) AS total_release,
             SUM(total_land_release) AS total_land_release,
             SUM(total_water_release) AS total_water_release,
-            SUM(total_air_release) AS total_air_release
+            SUM(total_air_release) AS total_air_release,
+            ARRAY_AGG(DISTINCT tri_chem_id ORDER BY tri_chem_id) AS chemical_ids
+
         FROM waste_data
         GROUP BY city, county, state
         ORDER BY total_release DESC;
@@ -40,27 +44,32 @@ queries = {
                 tfh.city,
                 tfh.county,
                 tfh.state,
+                COUNT(DISTINCT tri_chem_id) AS unique_chemical_count,
                 trf.doc_ctrl_num,
                 trf.reporting_year,
+                trf.tri_chem_id,
                 ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
                 ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
                 ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
-                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release
+                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release,
+
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
             WHERE trf.reporting_year >= 2020
-            GROUP BY tfh.city, tfh.county, tfh.state, trf.doc_ctrl_num, trf.reporting_year
+            GROUP BY tfh.city, tfh.county, tfh.state, trf.doc_ctrl_num, trf.reporting_year, trf.tri_chem_id
             Order By total_release DESC
         )
-        SELECT 
+        SELECT
             city,
             county,
             state,
+            COUNT(DISTINCT tri_chem_id) AS unique_chemical_count,
             SUM(total_release) AS total_release,
             SUM(total_land_release) AS total_land_release,
             SUM(total_water_release) AS total_water_release,
-            SUM(total_air_release) AS total_air_release
+            SUM(total_air_release) AS total_air_release,
+            ARRAY_AGG(DISTINCT tri_chem_id ORDER BY tri_chem_id) AS chemical_ids
         FROM waste_data
         GROUP BY city, county, state
         ORDER BY total_release DESC;
@@ -153,11 +162,11 @@ queries = {
             100.00 AS percentage_of_total
         FROM ranked_facilities rf;
         """,
-        "Chemical_Info":{
+        "Chemical_Info":
             """
-            Select trf.doc_ctrl_num, tci.chem_name, 
+            SELECT * FROM tri_chem_info;
             """
-        }
+        
 }
 
 for x in queries:
