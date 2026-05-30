@@ -11,6 +11,7 @@ import requests
 from io import StringIO
 from census import Census
 import addfips
+import TRI_data_processing
 start_time = time.time()
 
 alt.renderers.enable("mimetype")
@@ -20,6 +21,7 @@ load_dotenv()
 engine = create_engine(os.getenv('DATABASE_URL'))
 with open('queries.json', 'r') as f:
     queries = json.load(f)
+
 
 def total_waste_througout_from_top_10_facility_chart_generator():
     total_waste_throught_from_top_10_df = pd.read_sql(queries["Total_Waste_Throughout_top_10"], con=engine)
@@ -61,9 +63,8 @@ def total_waste_througout_from_top_10_facility_chart_generator():
 
     total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.png')
 
-
 def total_waste_by_state_throughout_or_After_2020(choice = ""):
-    
+
     if choice == 'After':
         state_waste_df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine) 
     else:
@@ -415,14 +416,12 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     
     return total_waste_throughout_top_10_chart
 
+
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
-
-total_waste_by_counties_throughout_or_After_2020(choice = 'After')
-
+#total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 #total_waste_througout_from_top_10_facility_chart_generator()
 #total_waste_througout_from_top_10_facility_chart_generator_interactive()
 #total_waste_by_counties_throughout_or_After_2020()
-
 #total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

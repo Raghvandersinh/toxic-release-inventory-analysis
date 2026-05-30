@@ -51,8 +51,7 @@ queries = {
                 ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
                 ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
                 ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
-                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release,
-
+                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release
             FROM tri_reporting_form trf
             JOIN tri_facility_history tfh ON trf.tri_facility_id = tfh.tri_facility_id
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
@@ -163,9 +162,20 @@ queries = {
         FROM ranked_facilities rf;
         """,
         "Chemical_Info":
-            """
-            SELECT * FROM tri_chem_info;
-            """
+        """
+            SELECT 
+                tri_chem_id,
+                chem_name,
+                caac_ind,
+                carc_ind,
+                feds_ind,
+                classification,
+                metal_ind,
+                pbt_ind,
+                pfas_ind
+        FROM tri_chem_info;
+        """
+        
         
 }
 
