@@ -10,12 +10,17 @@ This goal of this project is answer questions such as:
 * What location has the most toxic relased?
     * From(2003 - 2025) 
         * By County:
-        ![alt text](Frontend/chart/total_waste_by_counties.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties.html]
+        ![alt text](Frontend/chart/county_waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_all_time.html]
         
         * By State: 
-        ![alt text](Frontend/chart/total_waste_by_state.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_state.html]
-    * From(2020 - 2025) By County
-    ![alt text](Frontend/chart/total_waste_by_counties_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_by_counties_2020s.html]
+        ![alt text](Frontend/chart/waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_all_time.html]
+    
+    * From(2020 - 2025) 
+        * By County
+            ![alt text](Frontend/chart/county_waste_dashboard_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_2020s.html]
+        
+        * By State:
+            ![alt text](Frontend/chart/waste_dashboard_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_2020s.html]
 
     
     Click the HTML for Interactive Mode. 
