@@ -78,7 +78,21 @@ queries = {
         WITH latest_facility_location AS (
             SELECT DISTINCT ON (tri_facility_id) 
                 tri_facility_id,
-                epa_standardized_parent
+                CASE
+                    WHEN parent_name IS NOT NULL 
+                        AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
+                        THEN parent_name
+                    WHEN epa_standardized_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_parent
+                    WHEN name IS NOT NULL 
+                        AND UPPER(name) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN name
+                    WHEN epa_standardized_foreign_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_foreign_parent
+                    ELSE NULL
+                END AS parent
             FROM tri_facility_history
             ORDER BY tri_facility_id, create_date DESC
         ),
@@ -98,17 +112,17 @@ queries = {
             JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
             GROUP BY trf.tri_facility_id
             ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC
-            LIMIT 10
+            LIMIT 30
         )
         SELECT 
-            lfl.epa_standardized_parent AS name,
+            lfl.parent AS name,
             fmt.reporting_year,
             ROUND(SUM(fmt.total_release), 2) AS total_release
         FROM facility_monthly_totals fmt
         JOIN top_10_facilities t10 ON fmt.tri_facility_id = t10.tri_facility_id
         JOIN latest_facility_location lfl ON fmt.tri_facility_id = lfl.tri_facility_id
-        GROUP BY lfl.epa_standardized_parent, fmt.reporting_year
-        ORDER BY fmt.reporting_year, lfl.epa_standardized_parent;
+        GROUP BY lfl.parent, fmt.reporting_year
+        ORDER BY fmt.reporting_year, lfl.parent;
     """,
     "Total_Waste_Top_10_Vs_Rest_Facilities":
         """

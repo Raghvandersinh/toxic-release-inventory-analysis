@@ -403,8 +403,9 @@ def get_county_release_type_data(county_df):
     )
     
     return bar_data
-state_df, bar_data = get_state_waste_data(choice='After')
-inspect_state_data(state_df)
 
-state_df, indicator_counts = get_chemical_indicator_data(choice='After')
-inspect_indicator_data(indicator_counts)
+# state_df, bar_data = get_state_waste_data(choice='After')
+# inspect_state_data(state_df)
+
+# state_df, indicator_counts = get_chemical_indicator_data(choice='After')
+# inspect_indicator_data(indicator_counts)

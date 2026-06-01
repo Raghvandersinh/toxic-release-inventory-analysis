@@ -171,6 +171,18 @@ def transform_tri_form_total(raw_data):
         return None
     
 def transform_tri_facility_db(raw_data):
+    """
+    Transforms the raw JSON data from the TRI_facility_db 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_facility_db table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df['db_num'] = df['db_num'].astype(str)
@@ -183,6 +195,18 @@ def transform_tri_facility_db(raw_data):
         return None
 
 def transform_tri_facility_npdes(raw_data):
+    """
+    Transforms the raw JSON data from the TRI Facility NPDES 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_facility_npdes table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df = true_false_to_boolean(df, column = 'asgn_npdes_ind')
@@ -196,6 +220,18 @@ def transform_tri_facility_npdes(raw_data):
         return None
 
 def transform_tri_facility_rcra(raw_data):
+    """
+    Transforms the raw JSON data from the TRI Facility RCRA 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_facility_rcra table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df = true_false_to_boolean(df, 'asgn_rcra_ind')
@@ -209,6 +245,18 @@ def transform_tri_facility_rcra(raw_data):
         return None
 
 def transform_tri_facility_uic(raw_data):
+    """
+    Transforms the raw JSON data from the TRI Facility UIC 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_facility_uic table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df = true_false_to_boolean(df, column = 'asgn_uic_ind')
@@ -222,6 +270,18 @@ def transform_tri_facility_uic(raw_data):
         return None
 
 def transform_tri_reporting_form(raw_data):
+    """
+    Transforms the raw JSON data from the TRI Reporting Form 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_reporting_form table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df['doc_ctrl_num'] = df['doc_ctrl_num'].astype(str)
@@ -235,6 +295,18 @@ def transform_tri_reporting_form(raw_data):
         return None
     
 def transform_tri_submission_naics(raw_data):
+    """
+    Transforms the raw JSON data from the TRI Facility NPDES 
+    table into a pandas DataFrame with the appropriate data types 
+    and structure for database insertion.
+    
+    Parameter:
+        raw_data: raw_data extracted from the EPA DMAP API.
+        Specically the tri_form_totals endpoint.
+    Returns: 
+        Insertion ready data for our tri_facility_npdes table in our
+        TRI Database.
+    """
     try:
         df = pd.DataFrame(raw_data)
         df['doc_ctrl_num'] = df['doc_ctrl_num'].astype(str)
@@ -248,6 +320,10 @@ def transform_tri_submission_naics(raw_data):
         return None
     
 def insert_naics_codes():
+    '''
+    Reads the naics_codes.xlsx and cleans it up into format [naics_code, name, type] to safely store into our naics_code table. 
+    '''
+    
     df = pd.read_excel('Backend/TRI/naics_codes.xlsx')
     df = df.iloc[:, [1,2]]
     df = df.dropna()

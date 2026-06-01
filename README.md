@@ -2,30 +2,39 @@
 
 ## A fully functional project written in Python that creates a TRI  Database Model and a Data Extraction Pipeline to insert clean data into the TRI database for further Analysis.
 
-This goal of this project is answer questions such as:
-* What are the Top 10 Facility Released The Most Toxic Waste Throughout the Years?
-    ![alt text](Frontend/chart/total_waste_throughout_top_10.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_throughout_top_10.html]
+### This goal of this project is answer questions such as:
 
-    Click the HTML for Interactive Mode. 
-* What location has the most toxic relased?
-    * From(2003 - 2025) 
-        * By County:
-        ![alt text](Frontend/chart/county_waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_all_time.html]
+1. What facility was involved in dumping the most?
+    * 
+
+
+### Visualization:
+1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
+
+    1. Top 10 Facility: 
+        ![alt text](Frontend/chart/total_waste_throughout_top_10.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/total_waste_throughout_top_10.html]
+
+    * Click the HTML for Interactive Mode. 
+
+2. Dashboard of the Total Waste Released in the US states and counties. 
         
+    1. From(2003 - 2025) 
+        * By County:
+            ![alt text](Frontend/chart/county_waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_all_time.html]
+            
         * By State: 
-        ![alt text](Frontend/chart/waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_all_time.html]
-    
-    * From(2020 - 2025) 
+            ![alt text](Frontend/chart/waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_all_time.html]
+        
+    2. From(2020 - 2025) 
         * By County
             ![alt text](Frontend/chart/county_waste_dashboard_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_2020s.html]
-        
+            
         * By State:
             ![alt text](Frontend/chart/waste_dashboard_2020s.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_2020s.html]
 
-    
-    Click the HTML for Interactive Mode. 
-* What state has the most dangerous toxic?
-* To Be Continued...
+            
+    * Click the HTML for Interactive Mode. 
+
 
 Process used:
 * Used SQLAlchemy ORM(Object Relational Mapping) to generate Tables and Column for the TRI Database. 
