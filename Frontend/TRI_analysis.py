@@ -43,8 +43,8 @@ def total_waste_througout_from_top_10_facility_chart_generator():
         strokeWidth=2,
         point=False  # Remove points for cleaner lines
     ).encode(
-        x=alt.X('reporting_year:T', 
-                axis=alt.Axis(format='%Y', labelAngle=-45, title='Date'),
+        x=alt.X('reporting_year:N', 
+                axis=alt.Axis(labelAngle=-45, title='Date'),
                 title=None),
         y=alt.Y('total_release:Q', 
                 axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
@@ -110,8 +110,8 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
             size=50
         )
     ).encode(
-        x=alt.X('reporting_year:T', 
-                axis=alt.Axis(format='%Y', labelAngle=-45, title='Date'),
+        x=alt.X('reporting_year:N', 
+                axis=alt.Axis(labelAngle=-45, title='Date'),
                 title=None),
         y=alt.Y('total_release:Q', 
                 axis=alt.Axis(format=',.0f', title='Total Release (lbs)'),
@@ -121,7 +121,7 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
                         sort='-y'),
         tooltip=[
             alt.Tooltip('name:N', title='Facility'),
-            alt.Tooltip('reporting_year:T', title='Date', format='%Y'),
+            alt.Tooltip('reporting_year:N', title='Date'),
             alt.Tooltip('total_release:Q', title='Total Release', format=',.0f'),
         ],
         # Only use opacity change based on legend selection
