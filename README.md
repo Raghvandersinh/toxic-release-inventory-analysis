@@ -6,7 +6,7 @@
 
 1. What facility was involved in dumping the most throughout the years?
     1. 1987 
-        * After analysis the total_waste_throughout_top_10.html chart. We see a massive gap between Kree Mcgee Corp and other facilities during the 1987 approximately billons of pounds worth of waste gap. While I can't seem to find the articles for the specific year, I did find articles about Kerr Mcgee prior to 1987. 
+        * After analysis the total_waste_throughout_top_10.html chart. We see a massive gap between **Kree Mcgee Corp** and other facilities during the 1987 approximately 5.2 billons of pounds worth of waste gap. While I can't seem to find the articles for the specific year, I did find articles about Kerr Mcgee prior to 1987. 
         
             According to the DARRP(Damage Assement Remedition, and Restoration Program) between 1979-1980 Kerr Mcgee dismantled one of its creosote wood-treating facilities located at "250-acre parcel of land adjacent to the Cape Fear River, Brunswick River and Sturgeon Creek in Navassa, North Carolina."(DARRP), which then released Creosote and sludge, which then led to the release of SVOC (Semi Volatile Organic Compound) spefcically the PAH(Polycyclic Aromatic Hydrocarbon) which is released to soils, groundwater, and surronding marsh sediments sites. According to my database (which I got the data from EPA.gov) PAH is a Cancer Causing PBT chemical.
             
@@ -21,9 +21,17 @@
             
             https://www.epa.gov/navajo-nation-uranium-cleanup/cove-area-mines
             
-        The Activites of Kerr Mcgee stops at 2001 according to my analysis(go to in [Section 'Visualization']), due to all the legal pushback and brought by Anadrako Petroleum at 2006
+        The Activites of Kerr Mcgee stops at 2001 according to my analysis(go to in [Top 30 Facility visualization](#visualization)), due to all the legal pushback and brought by Anadrako Petroleum at 2006
     
-    https://www.sec.gov/Archives/edgar/data/773910/000095012906007908/h38749exv99w1.htm
+        https://www.sec.gov/Archives/edgar/data/773910/000095012906007908/h38749exv99w1.htm
+    2. 1998
+        * We see a small spike **Neveda Gold Mines LLC** (Joint venture between Barrick and Newmont as of 2019), primary toxic chemical being released is mercury. According to Greg Jones and Glenn Miller. Amount of mercury released into the atomospehere from gold mines has not been systematically measured and reported, and reliable estimates were not available, they were esitmate based on the EPA's series of emisson factor requirements. but during 1997 metal mining companies were required to report to the EPA as the beginning of 1998, thus we see according to our graph([Top 30 Facility visualization](#visualization)) that Neveda Gold Mines LLC waste data begins at 1998. 
+        
+        * According to Miller and Jones Neveda Gold Mines released 3700 lbs of mercury air emission in 1998, Barrick released 13,629 tons of Mercury by-product in 1999, Newmont released 16,264 lbs of mercury by product in 1989. 
+        * We can speculate that Majority of the pollution at the State of Utah and Neveda came from these Gold Mines([By State 2003 - 2025](#visualization)). Accoriding to my State Waste map 2003 - 2025 and 2020s most of the pollution occured in Lands. 
+
+
+        https://downloads.regulations.gov/EPA-HQ-SFUND-2015-0781-2119/content.pdf
 
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
@@ -36,10 +44,10 @@
 2. Dashboard of the Total Waste Released in the US states and counties. 
         
     1. From(2003 - 2025) 
-        * By County:
+        * By County 2003-2025:
             ![alt text](Frontend/chart/county_waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/county_waste_dashboard_all_time.html]
             
-        * By State: 
+        * By State 2003 - 2025: 
             ![alt text](Frontend/chart/waste_dashboard_all_time.png)[https://raghvandersinh.github.io/toxic-release-inventory-analysis/Frontend/chart/waste_dashboard_all_time.html]
         
     2. From(2020 - 2025) 
