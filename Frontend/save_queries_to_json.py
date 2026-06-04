@@ -74,10 +74,11 @@ queries = {
         ORDER BY total_release DESC;
     """,
 
-    "Total_Waste_Throughout_top_10": """
-        WITH latest_facility_location AS (
-            SELECT DISTINCT ON (tri_facility_id) 
-                tri_facility_id,
+    "Total_Waste_Throughout_top_10": 
+    '''       
+        WITH distinct_facility AS (
+            SELECT DISTINCT ON(tri_facility_id)
+                tri_facility_id as id,
                 CASE
                     WHEN parent_name IS NOT NULL 
                         AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
@@ -92,38 +93,45 @@ queries = {
                         AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
                         THEN epa_standardized_foreign_parent
                     ELSE NULL
-                END AS parent
-            FROM tri_facility_history
-            ORDER BY tri_facility_id, create_date DESC
+                END AS facility_name
+            FROM tri_facility_history 
         ),
-        facility_monthly_totals AS (
-            SELECT 
-                trf.tri_facility_id,
-                trf.reporting_year,
-                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release
-            FROM tri_reporting_form trf
-            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
-            GROUP BY trf.tri_facility_id, trf.reporting_year
+        distinct_facility_by_year AS (
+            SELECT DISTINCT df.facility_name as facility_name, trf.reporting_year as year, trf.doc_ctrl_num as doc_ctrl_num
+            FROM distinct_facility df
+            JOIN tri_reporting_form trf ON trf.tri_facility_id = df.id
+            Where df.facility_name IS NOT NULL 
+            ORDER BY trf.reporting_year
         ),
+        
         top_10_facilities AS (
             SELECT 
-                trf.tri_facility_id
-            FROM tri_reporting_form trf
-            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
-            GROUP BY trf.tri_facility_id
-            ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC
-            LIMIT 30
+                df.facility_name as facility_name,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release,
+                DENSE_RANK() OVER(ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC) as most_waste_rank
+            FROM distinct_facility_by_year df
+            JOIN tri_form_total tft ON df.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY df.facility_name
+        ),
+        
+        facility_yearly_totals AS (
+            SELECT 
+                df.facility_name as facility_name,
+                df.year as year,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release
+            FROM distinct_facility_by_year df
+            JOIN tri_form_total tft ON df.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY df.facility_name, df.year
+            ORDER BY year
         )
-        SELECT 
-            lfl.parent AS name,
-            fmt.reporting_year,
-            ROUND(SUM(fmt.total_release), 2) AS total_release
-        FROM facility_monthly_totals fmt
-        JOIN top_10_facilities t10 ON fmt.tri_facility_id = t10.tri_facility_id
-        JOIN latest_facility_location lfl ON fmt.tri_facility_id = lfl.tri_facility_id
-        GROUP BY lfl.parent, fmt.reporting_year
-        ORDER BY fmt.reporting_year, lfl.parent;
-    """,
+                
+        SELECT fyt.facility_name as name, fyt.year as reporting_year, fyt.total_release as total_release
+        FROM facility_yearly_totals fyt
+        JOIN top_10_facilities ttf ON ttf.facility_name = fyt.facility_name
+        WHERE ttf.most_waste_rank <= 30
+        Order By reporting_year;
+    ''',
+    
     "Total_Waste_Top_10_Vs_Rest_Facilities":
         """
         WITH latest_facility_location AS (
@@ -198,3 +206,61 @@ for x in queries:
     queries[x] = " ".join(queries[x].split())
 with open('queries.json', 'w') as f:
     json.dump(queries, f, indent=4)
+    
+'''        
+
+    WITH distinct_facility AS (
+            SELECT DISTINCT ON(tri_facility_id)
+                tri_facility_id as id,
+                CASE
+                    WHEN parent_name IS NOT NULL 
+                        AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
+                        THEN parent_name
+                    WHEN epa_standardized_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_parent
+                    WHEN name IS NOT NULL 
+                        AND UPPER(name) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN name
+                    WHEN epa_standardized_foreign_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_foreign_parent
+                    ELSE NULL
+                END AS facility_name
+            FROM tri_facility_history 
+        ),
+        distinct_facility_by_year AS (
+            SELECT DISTINCT df.facility_name as facility_name, trf.reporting_year as year, trf.doc_ctrl_num as doc_ctrl_num
+            FROM distinct_facility df
+            JOIN tri_reporting_form trf ON trf.tri_facility_id = df.id
+            Where df.facility_name IS NOT NULL 
+            ORDER BY trf.reporting_year
+        ),
+        
+        top_10_facilities AS (
+            SELECT 
+                df.facility_name as facility_name,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release,
+                DENSE_RANK() OVER(ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC) as most_waste_rank
+            FROM distinct_facility_by_year df
+            JOIN tri_form_total tft ON df.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY df.facility_name
+        ),
+        
+        facility_yearly_totals AS (
+            SELECT 
+                df.facility_name as facility_name,
+                df.year as year,
+                SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release
+            FROM distinct_facility_by_year df
+            JOIN tri_form_total tft ON df.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY df.facility_name, df.year
+            ORDER BY year
+        )
+                
+        SELECT fyt.facility_name, fyt.year, fyt.total_release
+        FROM facility_yearly_totals fyt
+        JOIN top_10_facilities ttf ON ttf.facility_name = fyt.facility_name
+        WHERE ttf.most_waste_rank <= 30
+        Order By fyt.year;
+'''
