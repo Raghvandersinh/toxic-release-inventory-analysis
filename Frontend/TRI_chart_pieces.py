@@ -1,362 +1,399 @@
 import altair as alt
 from vega_datasets import data
 import TRI_data_processing as tdp
+import pandas as pd
 
-def create_state_choropleth(state_df):
+def create_interactive_state_dashboard(state_df, chemical_df=None, top_chemicals_n=8):
     """
-    Create the choropleth map layer
+    Create an interactive dashboard with state map, waste type breakdown, and chemical composition
     
     Parameters:
-        state_df: DataFrame with state_fips, total_release, state_name
+        state_df: DataFrame with state_fips, total_release, total_air_release, 
+                  total_water_release, total_land_release, state_name
+        chemical_df: DataFrame from aggregate_by_chemical() or get_top_chemicals_by_state()
+        top_chemicals_n: Number of top chemicals to show in pie chart (default: 8)
     
     Returns:
-        Altair chart layer
+        Interactive Altair dashboard
     """
+    # Create selection for states
+    selection = alt.selection_point(fields=['state_fips'], empty='all')
+    
+    # Prepare waste type data for all states (for linked bar chart)
+    waste_data = []
+    for _, row in state_df.iterrows():
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Air', 'amount': row['total_air_release']})
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Water', 'amount': row['total_water_release']})
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Land', 'amount': row['total_land_release']})
+    
+    waste_df = pd.DataFrame(waste_data)
     us_states = alt.topo_feature(data.us_10m.url, feature='states')
     
-    choropleth = alt.Chart(us_states).mark_geoshape().transform_lookup(
+    # Base choropleth map
+    base_map = alt.Chart(us_states).mark_geoshape(
+        stroke='black',
+        strokeWidth=0.5
+    ).transform_lookup(
         lookup='id',
-        from_=alt.LookupData(
-            state_df, 
-            key='state_fips',
-            fields=['total_release', 'state_name', 'state_fips']
-        )
+        from_=alt.LookupData(state_df, key='state_fips', 
+                           fields=['total_release', 'state_name', 'state_fips'])
     ).encode(
         color=alt.Color('total_release:Q',
                        scale=alt.Scale(scheme='reds', type='symlog', constant=1),
                        title="Total Waste Release (lbs)",
-                       legend=alt.Legend(format='.0f', tickCount=5, titleLimit=500)),
+                       legend=alt.Legend(format='.0f')),
         tooltip=[
             alt.Tooltip('state_name:N', title="State:"),
             alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
-        ]
-    )
-    
-    return choropleth
-
-
-def create_background_map():
-    """
-    Create the background map layer
-    
-    Returns:
-        Altair chart layer
-    """
-    us_states = alt.topo_feature(data.us_10m.url, feature='states')
-    
-    background = alt.Chart(us_states).mark_geoshape(
-        fill='lightgray',
-        stroke='white'
-    ).project('albersUsa').properties(
+        ],
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.4))
+    ).add_params(
+        selection
+    ).properties(
         width=700,
-        height=500
-    )
+        height=500,
+        title={
+            "text": "US Toxic Waste Release Interactive Dashboard",
+            "subtitle": "Click on any state to see detailed waste type breakdown and chemical composition",
+            "fontSize": 16,
+            "anchor": "middle"
+        }
+    ).project('albersUsa')
     
-    return background
-
-
-def create_release_type_bars(bar_data, selection):
-    """
-    Create bar chart showing release type breakdown
-    
-    Parameters:
-        bar_data: DataFrame with release_type and release_amount columns
-        selection: Altair selection for filtering
-    
-    Returns:
-        Altair chart
-    """
-    bars = alt.Chart(bar_data).mark_bar().encode(
-        y=alt.Y('release_type:N', 
-                title=None, 
-                sort=['Air', 'Land', 'Water'],
-                axis=alt.Axis(labelFontSize=12)),
-        x=alt.X('release_amount(lbs):Q', 
-                title='Release Amount (lbs)', 
-                axis=alt.Axis(format='.1e', labelFontSize=10)),
-        color=alt.Color('release_type:N',
-                       scale=alt.Scale(
-                           domain=['Air', 'Land', 'Water'],
-                           range=['#87CEEB', '#8B4513', '#4682B4']
-                       ),
+    # Stacked bar chart for waste type breakdown (filtered by selection)
+    stacked_chart = alt.Chart(waste_df).mark_bar().encode(
+        x=alt.X('type:N', 
+                title='Waste Type',
+                axis=alt.Axis(labelAngle=0)),
+        y=alt.Y('amount:Q', 
+                title='Release Amount (lbs)',
+                axis=alt.Axis(format='.0f')),
+        color=alt.Color('type:N', 
+                       scale=alt.Scale(scheme='category10'),
+                       title='Waste Type',
                        legend=None),
-        tooltip=[
-            alt.Tooltip('release_type:N', title='Type: '),
-            alt.Tooltip('release_amount(lbs):Q', title='Amount:', format=',.0f')
-        ]
+        tooltip=['state:N', 'type:N', 'amount:Q']
+    ).transform_filter(
+        selection
     ).properties(
         width=300,
-        height=200,
-        title='Release Breakdown by Type'
-    ).transform_filter(
-        selection
+        height=250,
+        title='Waste Type Breakdown for Selected State'
     )
     
-    return bars
-
-
-def create_chemical_indicator_bars(indicator_counts, selection):
-    """
-    Create grouped vertical bar chart (side-by-side bars)
-    This avoids the color conflict entirely
-    """
-    indicator_counts = indicator_counts.copy()
-    indicator_counts['has_indicator_label'] = indicator_counts['has_indicator'].map({
-        True: 'Yes',
-        False: 'No'
-    })
+    # Dynamic title showing selected state for chemical pie chart
+    selected_state_text = alt.Chart(state_df).mark_text(
+        align='center',
+        fontSize=14,
+        fontWeight='bold'
+    ).encode(
+        text=alt.condition(selection, alt.Text('state_name:N'), alt.value('No State Selected'))
+    ).transform_filter(
+        selection
+    ).properties(
+        width=400,
+        height=30
+    )
     
-    bars = alt.Chart(indicator_counts).mark_bar().encode(
-        x=alt.X('indicator:N', 
-                title=None,
-                sort=['CAAC', 'CARC', 'FEDS', 'PBT', 'PFAS'],
-                axis=alt.Axis(labelFontSize=12, labelAngle=0)),
-        y=alt.Y('count:Q', 
-                title='Number of Chemicals',
-                axis=alt.Axis(format='d')),
-        color=alt.Color('has_indicator_label:N',
-                       scale=alt.Scale(
-                           domain=['No', 'Yes'],
-                           range=['#D3D3D3', '#006837']
-                       ),
-                       legend=alt.Legend(
-                           title='Has Indicator',
-                           symbolType='square'
-                       )),
-        xOffset=alt.XOffset('has_indicator_label:N',
-                           sort=['No', 'Yes']),
+    # Create chemical pie chart (filtered by selection)
+    # We need to pre-calculate top chemicals for each state or compute on the fly
+    if chemical_df is None:
+        # Option 1: Pre-calculate top chemicals for all states
+        chemical_pie_chart = create_chemical_pie_chart_from_state_df(state_df, selection, top_chemicals_n)
+    else:
+        # Option 2: Use provided chemical_df
+        chemical_pie_chart = create_chemical_pie_chart_from_chemical_df(chemical_df, selection, top_chemicals_n)
+    
+    # Horizontal bar chart for top states (highlighting selection)
+    top_states = state_df.nlargest(15, 'total_release').copy()
+    
+    bar_chart = alt.Chart(top_states).mark_bar(
+        cornerRadiusTopRight=5,
+        cornerRadiusBottomRight=5
+    ).encode(
+        x=alt.X('total_release:Q', 
+                title='Total Waste Release (lbs)',
+                axis=alt.Axis(format='.0f')),
+        y=alt.Y('state_name:N', 
+                sort='-x', 
+                title='State',
+                axis=alt.Axis(labelLimit=300)),
+        color=alt.condition(selection, 
+                           alt.Color('total_release:Q', scale=alt.Scale(scheme='reds')), 
+                           alt.value('lightgray')),
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.5)),
         tooltip=[
-            alt.Tooltip('indicator:N', title='Indicator'),
-            alt.Tooltip('has_indicator_label:N', title='Present'),
-            alt.Tooltip('count:Q', title='Count', format='d')
+            alt.Tooltip('state_name:N', title='State'),
+            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
         ]
+    ).add_params(
+        selection
     ).properties(
         width=350,
+        height=350,
+        title='Top 15 States by Total Waste (Click to select)'
+    )
+    
+    # Combine right panel (bar chart + chemical pie)
+    right_panel = alt.vconcat(
+        bar_chart,
+        selected_state_text,
+        chemical_pie_chart
+    )
+    
+    # Combine all charts in a dashboard layout
+    dashboard = alt.vconcat(
+        base_map,
+        alt.hconcat(stacked_chart, right_panel)
+    ).configure_view(
+        stroke=None
+    ).configure_legend(
+        titleFontSize=12,
+        labelFontSize=11
+    )
+    
+    return dashboard
+
+
+def create_chemical_pie_chart_from_state_df(state_df, selection, top_n=8):
+    """
+    Create a pie chart showing top chemicals for selected state
+    This requires pre-computing top chemicals per state
+    """
+    # This is a placeholder - you'll need to compute top chemicals per state
+    # One approach: create a separate function that pre-computes this
+    
+    # For now, create a placeholder chart
+    placeholder_data = pd.DataFrame({
+        'chemical': ['Click a state', 'to see', 'top chemicals'],
+        'amount': [1, 1, 1]
+    })
+    
+    pie_chart = alt.Chart(placeholder_data).mark_arc().encode(
+        theta='amount:Q',
+        color='chemical:N',
+        tooltip=['chemical:N', 'amount:Q']
+    ).properties(
+        width=400,
         height=300,
-        title='Chemical Indicators'
+        title='Top Chemicals in Selected State'
+    )
+    
+    return pie_chart
+
+
+def create_chemical_pie_chart_from_chemical_df(chemical_df, selection, top_n=8):
+    """
+    Create a pie chart showing top chemicals for selected state using pre-computed data
+    
+    This function requires that chemical_df has state-level chemical aggregations
+    """
+    # Filter based on selection - this is tricky in Altair
+    # Alternative: Pre-compute for all states and filter in the chart
+    
+    pie_chart = alt.Chart(chemical_df).mark_arc().encode(
+        theta='total_release:Q',
+        color=alt.Color('chem_name:N', 
+                       scale=alt.Scale(scheme='tableau20'),
+                       legend=alt.Legend(title='Chemical', orient='right')),
+        tooltip=['chem_name:N', 'total_release:Q']
     ).transform_filter(
         selection
+    ).transform_window(
+        rank='rank(total_release)',
+        sort=[alt.SortField('total_release', order='descending')]
+    ).transform_filter(
+        alt.datum.rank <= top_n
+    ).properties(
+        width=400,
+        height=300,
+        title=f'Top {top_n} Chemicals in Selected State'
     )
     
-    return bars
-
-def add_interactive_stroke(choropleth, selection, hover_color='yellow', default_color='white'):
-    """
-    Add interactive stroke to choropleth based on selection
-    
-    Parameters:
-        choropleth: Altair choropleth chart
-        selection: Altair selection object
-        hover_color: Color when selected/hovered
-        default_color: Default stroke color
-    
-    Returns:
-        Altair chart with stroke encoding
-    """
-    return choropleth.encode(
-        stroke=alt.condition(
-            selection,
-            alt.value(hover_color),
-            alt.value(default_color)
-        ),
-        strokeWidth=alt.condition(
-            selection,
-            alt.value(2),
-            alt.value(0.5)
-        )
-    )
+    return pie_chart
 
 
-def total_waste_by_state_throughout_or_After_2020(choice=""):
+def create_enhanced_interactive_dashboard(df, state_df, top_n_chemicals=8):
     """
-    Main visualization function: State waste map with release type breakdown
+    Create the complete enhanced dashboard with chemical pie chart
     """
-    state_df, bar_data = tdp.get_state_waste_data(choice)
+    # Pre-compute top chemicals per state
+    top_chemicals_df = tdp.prepare_top_chemicals_per_state(df, state_df, top_n_chemicals)
     
-    print("State Waste Data Summary:")
-    print(f"  States: {len(state_df)}")
-    print(f"  Total Release Sum: {state_df['total_release'].sum():,.0f}")
-    print(f"  Mean Release: {state_df['total_release'].mean():,.0f}")
-    print(f"  Sample FIPS: {state_df['state_fips'].tolist()[:5]}")
+    # Create selection
+    selection = alt.selection_point(fields=['state_fips'], empty='all')
     
-    point_hover = alt.selection_point(
-        fields=['state_fips'], 
-        on='pointerover', 
-        empty=False,
-        name='hover_state'
-    )
+    # Prepare waste type data
+    waste_data = []
+    for _, row in state_df.iterrows():
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Air', 'amount': row['total_air_release']})
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Water', 'amount': row['total_water_release']})
+        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
+                          'type': 'Land', 'amount': row['total_land_release']})
     
-    background = create_background_map()
+    waste_df = pd.DataFrame(waste_data)
+    us_states = alt.topo_feature(data.us_10m.url, feature='states')
     
-    choropleth = create_state_choropleth(state_df)
-    choropleth = add_interactive_stroke(choropleth, point_hover)
-    choropleth = choropleth.add_params(point_hover)
-    choropleth = choropleth.project('albersUsa').properties(
-        width=700,
-        height=500,
-        title='Total Waste Release by State'
-    )
-    
-    bars = create_release_type_bars(bar_data, point_hover)
-    
-    final_map = alt.hconcat(
-        background + choropleth,
-        bars
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=20
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
-    )
-    
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    final_map.save(f'Frontend/chart/total_waste_by_state_{suffix}.png')
-    final_map.save(f'Frontend/chart/total_waste_by_state_{suffix}.html')
-    
-    return final_map
-
-
-def chemical_indicators_by_state(choice=""):
-    """
-    Main visualization function: Chemical indicators map with click interaction
-    """
-    state_df, indicator_counts = tdp.get_chemical_indicator_data(choice)
-    
-    print("Chemical Indicators Data Summary:")
-    print(f"  States: {len(state_df)}")
-    print(f"  Indicator rows: {len(indicator_counts)}")
-    print(f"  Indicators: {indicator_counts['indicator'].unique().tolist()}")
-    
-    click_select = alt.selection_point(
-        fields=['state_fips'], 
-        on='click', 
-        empty=False,
-        name='select_state'
-    )
-    
-    background = create_background_map()
-    
-    choropleth = create_state_choropleth(state_df)
-    choropleth = add_interactive_stroke(choropleth, click_select)
-    choropleth = choropleth.add_params(click_select)
-    choropleth = choropleth.project('albersUsa').properties(
-        width=700,
-        height=500,
-        title='Total Waste Release by State (Click for Chemical Indicators)'
-    )
-    
-    bars = create_chemical_indicator_bars(indicator_counts, click_select)
-    
-    final_map = alt.hconcat(
-        background + choropleth,
-        bars
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=20
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
-    )
-    
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    final_map.save(f'Frontend/chart/chemical_indicators_{suffix}.png')
-    final_map.save(f'Frontend/chart/chemical_indicators_{suffix}.html')
-    
-    return final_map
-
-
-def combined_state_waste_dashboard(choice=""):
-    """
-    Combined dashboard with both release types and chemical indicators
-    """
-    state_df, bar_data = tdp.get_state_waste_data(choice)
-    _, indicator_counts = tdp.get_chemical_indicator_data(choice)
-    
-    MAP_WIDTH = 800
-    MAP_HEIGHT = 600
-    
-
-    point_hover = alt.selection_point(
-        fields=['state_fips'], 
-        on='pointerover', 
-        empty=False,
-        name='hover_state'
-    )
-    
-    click_select = alt.selection_point(
-        fields=['state_fips'], 
-        on='click', 
-        empty=False,
-        name='select_state'
-    )
-    
-    background = alt.Chart(
-        alt.topo_feature(data.us_10m.url, feature='states')
-    ).mark_geoshape(
-        fill='lightgray',
-        stroke='white'
-    ).project('albersUsa').properties(
-        width=MAP_WIDTH,
-        height=MAP_HEIGHT  
-    )
-    
-    choropleth = create_state_choropleth(state_df)
-    
-    choropleth = choropleth.transform_calculate(
-        stroke_color="(select_state.state_fips && select_state.state_fips == datum.state_fips) ? 'blue' : "
-                     "(hover_state.state_fips && hover_state.state_fips == datum.state_fips) ? 'yellow' : "
-                     "'white'",
-        stroke_width="(select_state.state_fips && select_state.state_fips == datum.state_fips) ? 3 : "
-                     "(hover_state.state_fips && hover_state.state_fips == datum.state_fips) ? 2 : "
-                     "0.5"
+    # Base choropleth map
+    base_map = alt.Chart(us_states).mark_geoshape(
+        stroke='black',
+        strokeWidth=0.5
+    ).transform_lookup(
+        lookup='id',
+        from_=alt.LookupData(state_df, key='state_fips', 
+                           fields=['total_release', 'state_name', 'state_fips'])
     ).encode(
-        stroke=alt.Stroke('stroke_color:N', scale=None, legend=None),
-        strokeWidth=alt.StrokeWidth('stroke_width:Q', scale=None, legend=None)
+        color=alt.Color('total_release:Q',
+                       scale=alt.Scale(scheme='reds', type='symlog', constant=1),
+                       title="Total Waste Release (lbs)",
+                       legend=alt.Legend(format='.0f')),
+        tooltip=[
+            alt.Tooltip('state_name:N', title="State:"),
+            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
+        ],
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.4))
+    ).add_params(
+        selection
+    ).properties(
+        width=900,
+        height=500,
+        title={
+            "text": "US Toxic Waste Release Interactive Dashboard",
+            "subtitle": "Click on any state to see waste breakdown and top chemicals",
+            "fontSize": 16,
+            "anchor": "middle"
+        }
+    ).project('albersUsa')
+    
+    # Stacked bar chart for waste type
+    stacked_chart = alt.Chart(waste_df).mark_bar().encode(
+        x=alt.X('type:N', title='Waste Type'),
+        y=alt.Y('amount:Q', title='Release Amount (lbs)', axis=alt.Axis(format='.0f')),
+        color=alt.Color('type:N', scale=alt.Scale(scheme='category10'), title='Waste Type', legend=None),
+        tooltip=['state:N', 'type:N', 'amount:Q']
+    ).transform_filter(
+        selection
+    ).properties(
+        width=300,
+        height=350,
+        title='Waste Type Breakdown'
     )
     
-    choropleth = choropleth.add_params(point_hover, click_select)
-    choropleth = choropleth.project('albersUsa').properties(
-        width=MAP_WIDTH,
-        height=MAP_HEIGHT,  # Same as background
-        title='Total Waste Release by State'
+    # Top states bar chart
+    top_states = state_df.nlargest(15, 'total_release').copy()
+    
+    bar_chart = alt.Chart(top_states).mark_bar(
+        cornerRadiusTopRight=5,
+        cornerRadiusBottomRight=5
+    ).encode(
+        x=alt.X('total_release:Q', title='Total Waste Release (lbs)', axis=alt.Axis(format='.0f')),
+        y=alt.Y('state_name:N', sort='-x', title='State'),
+        color=alt.condition(selection, alt.Color('total_release:Q', scale=alt.Scale(scheme='reds')), alt.value('lightgray')),
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.5)),
+        tooltip=['state_name:N', alt.Tooltip('total_release:Q', format=',.0f')]
+    ).add_params(
+        selection
+    ).properties(
+        width=350,
+        height=350,
+        title='Top 15 States (Click to select)'
     )
     
-    release_bars = create_release_type_bars(bar_data, point_hover)
-    
-    indicator_bars = create_chemical_indicator_bars(indicator_counts, click_select)
-    
-    bar_column = alt.vconcat(
-        release_bars,
-        indicator_bars
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
+    # Dynamic state title for pie chart
+    pie_title = alt.Chart(state_df).mark_text(
+        align='center',
+        fontSize=14,
+        fontWeight='bold'
+    ).encode(
+        text=alt.condition(selection, alt.Text('state_name:N'), alt.value('Select a State'))
+    ).transform_filter(
+        selection
+    ).properties(
+        width=350,
+        height=30
     )
     
-    final_dashboard = alt.hconcat(
-        background + choropleth,  
-        bar_column
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=20
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
+    # Pie chart for top chemicals
+    if len(top_chemicals_df) > 0:
+        pie_chart = alt.Chart(top_chemicals_df).mark_arc(
+            innerRadius=50,
+            stroke='white'
+        ).encode(
+            theta=alt.Theta('total_release:Q', stack=True),
+            color=alt.Color('chem_name:N', 
+                           scale=alt.Scale(scheme='tableau20'),
+                           legend=alt.Legend(title='Chemical', orient='right', columns=1)),
+            tooltip=['chem_name:N', alt.Tooltip('total_release:Q', format=',.0f')]
+        ).transform_filter(
+            selection
+        ).properties(
+            width=350,
+            height=320,
+            title=f'Top {top_n_chemicals} Chemicals'
+        )
+    else:
+        placeholder_data = pd.DataFrame({
+            'chem_name': ['No Data Available'],
+            'total_release': [1]
+        })
+        pie_chart = alt.Chart(placeholder_data).mark_arc().encode(
+            theta='total_release:Q',
+            color=alt.Color('chem_name:N', title='Chemical'),
+            tooltip=['chem_name:N']
+        ).properties(
+            width=350,
+            height=320,
+            title='No Chemical Data Available'
+        )
+    
+    # Combine bar chart and pie chart horizontally
+    middle_row = alt.hconcat(bar_chart, alt.vconcat(pie_title, pie_chart))
+    
+    # Combine stacked chart with the bar+pie combo
+    bottom_row = alt.hconcat(stacked_chart, middle_row)
+    
+    # Final dashboard
+    dashboard = alt.vconcat(
+        base_map,
+        bottom_row
+    ).configure_view(
+        stroke=None
+    ).configure_legend(
+        titleFontSize=11,
+        labelFontSize=10,
+        orient='right'
     )
     
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    final_dashboard.save(f'Frontend/chart/waste_dashboard_{suffix}.png')
-    final_dashboard.save(f'Frontend/chart/waste_dashboard_{suffix}.html')
-    
-    return final_dashboard
+    return dashboard
 
+
+# Main execution
+def final_state_map_output(choices = 'After'):
+    # Fetch and process data
+    df = tdp.fetch_waste_data(choice=choices)
+    state_df = tdp.aggregate_by_state(df)
+    
+    # Debug: Check if states match
+    print("States in raw data:", sorted(df['state'].unique()))
+    print("States in aggregated data:", sorted(state_df['state'].unique()))
+    
+    # Create enhanced dashboard with chemical pie chart
+    enhanced_dashboard = create_enhanced_interactive_dashboard(df, state_df, top_n_chemicals=8)
+    enhanced_dashboard.show()
+    
+    # Save
+    if choices == 'After':
+        enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_2020s.html')
+    else:
+        enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_Throughout.html')
+
+
+#--------------------------------------COUNTY--------------------------------------------
 def create_county_background_map(width=800, height=600):
     """Create county background map"""
     counties = alt.topo_feature(data.us_10m.url, feature='counties')

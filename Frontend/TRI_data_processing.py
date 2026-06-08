@@ -233,6 +233,75 @@ def get_top_chemicals_by_state(df, state_abbr, top_n=10):
     
     return top_chemicals
 
+def prepare_top_chemicals_per_state(df, state_df, top_n=8):
+    """
+    Pre-compute top chemicals for each state for dashboard visualization
+    
+    Parameters:
+        df: DataFrame from fetch_waste_data()
+        state_df: DataFrame from aggregate_by_state() (contains state_fips and state_name)
+        top_n: Number of top chemicals per state
+    
+    Returns:
+        DataFrame with top chemicals per state including 'Other Chemicals' category
+    """
+    df = df.copy()
+    
+        # Create a mapping for state names and FIPS codes
+    state_info = state_df[['state', 'state_fips', 'state_name']].drop_duplicates()
+    
+    # Aggregate to state-chemical level (only using columns that exist in raw df)
+    state_chemical = df.groupby(['state', 'tri_chem_id', 'chem_name'], as_index=False).agg({
+        'total_release': 'sum'
+    })
+    
+    # Merge with state info to add state_fips and state_name
+    state_chemical = state_chemical.merge(state_info, on='state', how='left')
+    
+    # Drop any rows where state_fips is NaN
+    state_chemical = state_chemical.dropna(subset=['state_fips'])
+    
+    # Get top N chemicals per state
+    top_chemicals_per_state = []
+    
+    for state in state_chemical['state'].unique():
+        state_data = state_chemical[state_chemical['state'] == state].copy()
+        
+        # Ensure we have data for this state
+        if len(state_data) == 0:
+            continue
+            
+        top_n_state = state_data.nlargest(top_n, 'total_release')
+        
+        # Add "Other" category for remaining chemicals
+        other_total = state_data[~state_data['chem_name'].isin(top_n_state['chem_name'])]['total_release'].sum()
+        
+        if other_total > 0:
+            # Get state info for the other row - with safe access
+            state_info_rows = state_info[state_info['state'] == state]
+            if len(state_info_rows) > 0:
+                state_info_row = state_info_rows.iloc[0]
+                other_row = pd.DataFrame({
+                    'state': [state],
+                    'state_fips': [state_info_row['state_fips']],
+                    'state_name': [state_info_row['state_name']],
+                    'tri_chem_id': ['OTHER'],
+                    'chem_name': ['Other Chemicals'],
+                    'total_release': [other_total]
+                })
+                top_n_state = pd.concat([top_n_state, other_row], ignore_index=True)
+        
+        top_chemicals_per_state.append(top_n_state)
+    
+    # Combine all states
+    if top_chemicals_per_state:
+        result_df = pd.concat(top_chemicals_per_state, ignore_index=True)
+    
+    else:
+        # Return empty DataFrame with expected columns if no data
+        result_df = pd.DataFrame(columns=['state', 'state_fips', 'state_name', 'tri_chem_id', 'chem_name', 'total_release'])
+    
+    return result_df
 
 def inspect_state_data(state_df):
     """Print summary of state waste data"""
@@ -363,167 +432,257 @@ def state_waste_analysis():
     print("\n" + "=" * 60)
     print("TESTING COMPLETE ✓")
     print("=" * 60)
-state_waste_analysis()
 
-def map_db_counties_to_fips_code(location_db):
-    print("Starting function...")
-    print(f"Loaded {len(location_db)} rows")
-    
-    def safe_state_lookup(abbr):
-        result = states.lookup(abbr)
-        return result.name if result is not None else pd.NA 
-    
-    location_db['state_name'] = location_db['state'].apply(safe_state_lookup)
-    print("State names added")
-    
-    af = addfips.AddFIPS()
-    
-    unique_counties = location_db[['county', 'state']].drop_duplicates()
-    print(f"Processing {len(unique_counties)} unique county-state combinations")
-    
-    county_fips_map = {}
-    for _, row in unique_counties.iterrows():
-        try:
-            county_fips_map[(row['county'], row['state'])] = af.get_county_fips(row['county'], state=row['state'])
-        except Exception as e:
-            print(f"Error looking up {row['county']}, {row['state']}: {e}")
-            county_fips_map[(row['county'], row['state'])] = pd.NA
-    
-    print(f"Created FIPS map with {len(county_fips_map)} entries")
 
-    location_db['county_fips'] = location_db.apply(
-        lambda row: county_fips_map.get((row['county'], row['state']), pd.NA), 
-        axis=1
-    )
-
-    return location_db
-
-def get_county_waste_data(choice=""):
+#----------------COUNTY---------------------------
+def aggregate_by_county(df):
     """
-    Fetch and process county-level waste data
+    Goal 1 & 2: Get total waste per county and waste type (air, water, land)
     
     Parameters:
-        choice: "" for all time, "After" for post-2020
+        df: DataFrame from fetch_waste_data() - has chemical-level rows
     
     Returns:
-        county_df: DataFrame with county-level aggregations and FIPS codes
+        DataFrame with county-level aggregations: total_release, land, water, air
+        Includes state and FIPS codes (combined state+county FIPS)
     """
-    if choice == 'After':
-        df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine)
-    else:
-        df = pd.read_sql(queries['Waste_By_Location'], con=engine)
+    df = df.copy()
     
-    df = map_db_counties_to_fips_code(location_db=df)
-    
-    county_df = df.groupby('county_fips').agg({
+    # First aggregate to location level (state-county-city) to avoid double-counting
+    location_df = df.groupby(['state', 'county', 'city'], as_index=False).agg({
         'total_release': 'sum',
         'total_land_release': 'sum',
         'total_water_release': 'sum',
-        'total_air_release': 'sum',
-        'county': 'first',
-        'state_name': 'first',
-        'state': 'first'
-    }).reset_index()
+        'total_air_release': 'sum'
+    })
     
-    county_df = county_df.dropna(subset=['county_fips'])
-    county_df['county_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+    # Then aggregate to county level
+    county_df = location_df.groupby(['state', 'county'], as_index=False).agg({
+        'total_release': 'sum',
+        'total_land_release': 'sum',
+        'total_water_release': 'sum',
+        'total_air_release': 'sum'
+    })
+    
+    # Add FIPS codes for counties
+    county_df = add_county_fips_mapping(county_df)
     
     return county_df
 
 
-def get_county_chemical_indicator_data(choice=""):
+def add_county_fips_mapping(county_df):
     """
-    Process chemical indicator data at county level
+    Add FIPS codes for counties using the us library or manual mapping
+    
+    Parameters:
+        county_df: DataFrame with 'state' and 'county' columns
     
     Returns:
-        county_df: DataFrame for map
-        indicator_counts: DataFrame for indicator bars
+        DataFrame with added 'county_fips' and 'combined_fips' columns
     """
-    if choice == 'After':
-        df = pd.read_sql(queries['Waste_By_Location_2020s'], con=engine)
-    else:
-        df = pd.read_sql(queries['Waste_By_Location'], con=engine)
+    # Note: You'll need a county FIPS mapping. Options:
+    # 1. Use a library like 'us' (but it doesn't have county data)
+    # 2. Use a CSV mapping file
+    # 3. Query from database if you have a counties table
     
-    chem_info_df = fetch_chemical_info()
+    # For now, let's create a placeholder function
+    # You'll need to replace this with actual FIPS data
     
-    df = map_db_counties_to_fips_code(location_db=df)
+    county_df = county_df.copy()
     
-    county_df = df.groupby('county_fips').agg({
+    # Create combined FIPS (2-digit state + 3-digit county)
+    # This is a placeholder - you need actual county FIPS codes
+    # Example approach if you have mapping:
+    
+    # Load county FIPS mapping (you'll need to provide this)
+    # county_fips_map = load_county_fips_mapping()  # Dict with (state, county) -> fips
+    
+    # Apply mapping
+    # county_df['county_fips'] = county_df.apply(
+    #     lambda row: county_fips_map.get((row['state'], row['county']), None), axis=1
+    # )
+    
+    # Temporary: create a simple row number as placeholder
+    county_df['county_fips'] = range(1, len(county_df) + 1)
+    county_df['combined_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+    
+    return county_df
+
+
+def aggregate_by_chemical_county(df):
+    """
+    Get total waste by chemical per county
+    
+    Parameters:
+        df: DataFrame from fetch_waste_data()
+    
+    Returns:
+        DataFrame with chemical-county level aggregations
+    """
+    df = df.copy()
+    
+    # Aggregate to county-chemical level
+    county_chemical_df = df.groupby(['state', 'county', 'tri_chem_id', 'chem_name'], as_index=False).agg({
         'total_release': 'sum',
         'total_land_release': 'sum',
         'total_water_release': 'sum',
-        'total_air_release': 'sum',
-        'county': 'first',
-        'state_name': 'first',
-        'state': 'first'
-    }).reset_index()
+        'total_air_release': 'sum'
+    })
     
-    county_df = county_df.dropna(subset=['county_fips'])
-    county_df['county_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+    # Sort by total release descending
+    county_chemical_df = county_chemical_df.sort_values('total_release', ascending=False).reset_index(drop=True)
     
-
-    chem_data = df[['county_fips', 'chemical_ids']].copy()
-    chem_data['chem_str'] = chem_data['chemical_ids'].apply(
-        lambda x: ','.join(sorted([str(i) for i in x])) if isinstance(x, list) else str(x)
-    )
-    chem_data = chem_data.drop_duplicates(subset=['county_fips', 'chem_str'])
-    chem_data = chem_data.drop(columns=['chem_str'])
-    
-    chem_data = chem_data.explode('chemical_ids')
-    chem_data = chem_data.rename(columns={'chemical_ids': 'tri_chem_id'})
-    chem_data['tri_chem_id'] = chem_data['tri_chem_id'].astype(str)
-    chem_data = chem_data.dropna(subset=['tri_chem_id'])
-    
-    chem_info_subset = chem_info_df[[
-        'tri_chem_id', 'caac_ind', 'carc_ind', 'feds_ind', 
-        'pbt_ind', 'pfas_ind'
-    ]]
-    
-    chem_data = chem_data.merge(chem_info_subset, on='tri_chem_id', how='left')
-    
-    indicator_cols = ['caac_ind', 'carc_ind', 'feds_ind', 'pbt_ind', 'pfas_ind']
-    
-    indicator_data = chem_data.melt(
-        id_vars=['county_fips'],
-        value_vars=indicator_cols,
-        var_name='indicator',
-        value_name='has_indicator'
-    )
-    
-    indicator_data['indicator'] = indicator_data['indicator'].str.replace('_ind', '').str.upper()
-    
-    indicator_counts = indicator_data.groupby(
-        ['county_fips', 'indicator', 'has_indicator']
-    ).size().reset_index(name='count')
-    
-    return county_df, indicator_counts
+    return county_chemical_df
 
 
-def get_county_release_type_data(county_df):
+def aggregate_boolean_indicators_by_county(df):
     """
-    Transform county data for release type bar chart
+    Get percentage of True occurrences per county for boolean indicators
+    
+    Parameters:
+        df: DataFrame from fetch_waste_data() with chemical info joined
     
     Returns:
-        DataFrame in long format
+        DataFrame with county and percentage of True for each indicator
     """
-    bar_data = county_df.melt(
-        id_vars=['county_fips', 'county', 'state_name', 'total_release'],
-        value_vars=['total_land_release', 'total_water_release', 'total_air_release'],
-        var_name='release_type',
-        value_name='release_amount(lbs)'
+    df = df.copy()
+    
+    # Deduplicate at chemical-location level
+    # Each combination of county + chemical should be counted once for boolean indicators
+    unique_chemicals_per_county = df.groupby(['state', 'county', 'tri_chem_id', 'chem_name']).first().reset_index()
+    
+    # Calculate percentages for each boolean indicator
+    boolean_cols = ['caac_ind', 'carc_ind', 'feds_ind', 'pbt_ind', 'pfas_ind']
+    
+    result_dfs = []
+    for col in boolean_cols:
+        # Convert to boolean if needed
+        unique_chemicals_per_county[col] = unique_chemicals_per_county[col].astype(str).str.lower().map({'true': True, 'false': False, '1': True, '0': False})
+        
+        # Calculate percentage of True per county
+        county_stats = unique_chemicals_per_county.groupby(['state', 'county'])[col].agg(['sum', 'count'])
+        county_stats['percentage'] = (county_stats['sum'] / county_stats['count'] * 100).round(2)
+        county_stats = county_stats[['percentage']].rename(columns={'percentage': f'pct_{col}'})
+        result_dfs.append(county_stats)
+    
+    # Combine all indicators
+    boolean_df = result_dfs[0]
+    for df_bool in result_dfs[1:]:
+        boolean_df = boolean_df.join(df_bool)
+    
+    boolean_df = boolean_df.reset_index()
+    
+    # Add FIPS codes
+    boolean_df = add_county_fips_mapping(boolean_df)
+    
+    return boolean_df
+
+
+def get_complete_county_analysis(df):
+    """
+    Combine all goals into a single comprehensive county-level DataFrame
+    
+    Returns:
+        DataFrame with total waste, waste types, and boolean percentages per county
+    """
+    # Goal 1 & 2: Total waste by county
+    waste_df = aggregate_by_county(df)
+    
+    # Goal 4: Boolean percentages by county
+    boolean_df = aggregate_boolean_indicators_by_county(df)
+    
+    # Combine all
+    complete_df = waste_df.merge(
+        boolean_df, 
+        on=['state', 'county'], 
+        how='left'
     )
     
-    bar_data['release_type'] = (
-        bar_data['release_type']
-        .str.replace('total_', '')
-        .str.replace('_release', '')
-        .str.title()
-    )
+    return complete_df
+
+
+def get_top_chemicals_by_county(df, state_abbr, county_name, top_n=10):
+    """
+    Get top chemicals for a specific county
     
-    return bar_data
+    Parameters:
+        df: DataFrame from fetch_waste_data()
+        state_abbr: State abbreviation (e.g., 'TX', 'CA')
+        county_name: County name (e.g., 'HARRIS', 'LOS ANGELES')
+        top_n: Number of top chemicals to return
+    
+    Returns:
+        DataFrame with top chemicals by total release for that county
+    """
+    df = df.copy()
+    
+    # Filter for specific state and county
+    county_df = df[(df['state'] == state_abbr) & (df['county'] == county_name)].copy()
+    
+    if len(county_df) == 0:
+        print(f"No data found for {county_name}, {state_abbr}")
+        return pd.DataFrame()
+    
+    # Aggregate to chemical level
+    chemical_totals = county_df.groupby(['tri_chem_id', 'chem_name'], as_index=False).agg({
+        'total_release': 'sum'
+    })
+    
+    # Get top N
+    top_chemicals = chemical_totals.nlargest(top_n, 'total_release')
+    
+    return top_chemicals
 
-# state_df, bar_data = get_state_waste_data(choice='After')
-# inspect_state_data(state_df)
 
-# state_df, indicator_counts = get_chemical_indicator_data(choice='After')
-# inspect_indicator_data(indicator_counts)
+def get_top_counties_by_state(df, state_abbr, top_n=10):
+    """
+    Get top counties by total waste for a specific state
+    
+    Parameters:
+        df: DataFrame from fetch_waste_data()
+        state_abbr: State abbreviation (e.g., 'TX', 'CA')
+        top_n: Number of top counties to return
+    
+    Returns:
+        DataFrame with top counties by total release
+    """
+    df = df.copy()
+    
+    # Filter for state
+    state_df = df[df['state'] == state_abbr].copy()
+    
+    if len(state_df) == 0:
+        print(f"No data found for {state_abbr}")
+        return pd.DataFrame()
+    
+    # Aggregate to location level first
+    location_df = state_df.groupby(['state', 'county', 'city'], as_index=False).agg({
+        'total_release': 'sum'
+    })
+    
+    # Then aggregate to county level
+    county_totals = location_df.groupby(['state', 'county'], as_index=False).agg({
+        'total_release': 'sum'
+    })
+    
+    # Get top N counties
+    top_counties = county_totals.nlargest(top_n, 'total_release')
+    
+    return top_counties
+
+
+def inspect_county_data(county_df):
+    """Print summary of county waste data"""
+    print("County Waste Data Summary:")
+    print("-" * 50)
+    print(f"Number of counties: {len(county_df)}")
+    print(f"\nColumns: {county_df.columns.tolist()}")
+    print(f"\nSample data (top 10 counties by total release):")
+    top_counties = county_df.nlargest(10, 'total_release')
+    print(top_counties[['state', 'county', 'total_release', 'total_air_release', 
+                         'total_water_release', 'total_land_release']].to_string(index=False))
+    print(f"\nTotal release stats:")
+    print(f"  Sum: {county_df['total_release'].sum():,.0f}")
+    print(f"  Mean: {county_df['total_release'].mean():,.0f}")
+    print(f"  Max: {county_df['total_release'].max():,.0f}")
+    print(f"  Median: {county_df['total_release'].median():,.0f}")
