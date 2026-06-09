@@ -71,20 +71,20 @@ def total_waste_througout_from_top_10_facility_chart_generator():
 
     total_waste_throughout_top_10_chart.save('Frontend/chart/total_waste_throughout_top_10.png')
 
-def total_waste_by_state_throughout_or_After_2020(choices = ""):
+def total_waste_by_state_throughout_or_After_2020(choice = ""):
     '''
     Outputs the geographical map displaying total waste released in specific US states, It also shows what is the release type 
     (Air, Water, or Land release) and if the checmical is Presistent, Cancer causing or forever living.   
     '''
     
-    tcp.combined_state_waste_dashboard(choice=choices)
+    tcp.final_state_map_output(choices = choice)
 
 def total_waste_by_counties_throughout_or_After_2020(choices = ""):
     '''
     Outputs the geographical map displaying total waste released in specific US counties, It also shows what is the release type 
     (Air, Water, or Land release) and if the checmical is Presistent, Cancer causing or forever living.  
     '''
-    tcp.combined_county_waste_dashboard(choice = choices)
+    tcp.final_county_map_output(choices = choices)
     
 
 def total_waste_througout_from_top_10_facility_chart_generator_interactive():
@@ -154,9 +154,9 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
 
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 #total_waste_by_counties_throughout_or_After_2020(choice = 'After')
-total_waste_througout_from_top_10_facility_chart_generator()
-total_waste_througout_from_top_10_facility_chart_generator_interactive()
-#total_waste_by_counties_throughout_or_After_2020()
+#total_waste_througout_from_top_10_facility_chart_generator()
+#total_waste_througout_from_top_10_facility_chart_generator_interactive()
+total_waste_by_counties_throughout_or_After_2020(choices='')
 #total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")

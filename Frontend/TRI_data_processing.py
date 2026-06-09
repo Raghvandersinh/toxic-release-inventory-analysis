@@ -472,7 +472,7 @@ def aggregate_by_county(df):
 
 def add_county_fips_mapping(county_df):
     """
-    Add FIPS codes for counties using the us library or manual mapping
+    Add FIPS codes for counties using the addfips library
     
     Parameters:
         county_df: DataFrame with 'state' and 'county' columns
@@ -480,34 +480,187 @@ def add_county_fips_mapping(county_df):
     Returns:
         DataFrame with added 'county_fips' and 'combined_fips' columns
     """
-    # Note: You'll need a county FIPS mapping. Options:
-    # 1. Use a library like 'us' (but it doesn't have county data)
-    # 2. Use a CSV mapping file
-    # 3. Query from database if you have a counties table
+    try:
+        import addfips
+        af = addfips.AddFIPS()
+        
+        county_df = county_df.copy()
+        
+        # Convert state abbreviations to full names and get FIPS
+        fips_codes = []
+        state_abbr_map = get_state_abbreviation_map()
+        
+        for idx, row in county_df.iterrows():
+            state_abbr = row['state']
+            county_name = row['county']
+            
+            # Clean county name (remove "County", "Parish", etc.)
+            county_clean = clean_county_name(county_name)
+            
+            try:
+                # Get county FIPS using addfips
+                county_fips = af.get_county_fips(county_clean, state=state_abbr)
+                fips_codes.append(county_fips)
+            except:
+                # Try with state full name
+                state_full = state_abbr_map.get(state_abbr, state_abbr)
+                try:
+                    county_fips = af.get_county_fips(county_clean, state=state_full)
+                    fips_codes.append(county_fips)
+                except:
+                    print(f"Could not find FIPS for: {county_name}, {state_abbr}")
+                    fips_codes.append(None)
+        
+        county_df['county_fips'] = fips_codes
+        
+        # Remove rows with no FIPS code
+        null_fips = county_df['county_fips'].isna().sum()
+        if null_fips > 0:
+            print(f"Warning: {null_fips} counties could not be matched to FIPS codes")
+            county_df = county_df.dropna(subset=['county_fips'])
+        
+        # Ensure FIPS is integer for matching with TopoJSON
+        county_df['county_fips'] = county_df['county_fips'].astype(int)
+        county_df['combined_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+        
+        return county_df
+        
+    except ImportError:
+        print("addfips library not found. Install with: pip install addfips")
+        print("Using fallback method...")
+        return add_county_fips_mapping_fallback(county_df)
+
+def clean_county_name(county_name):
+    """Clean county name to match FIPS lookup format"""
+    # Remove common suffixes
+    suffixes = [' County', ' Parish', ' Borough', ' Census Area', ' Municipality',
+                ' City and Borough', ' City', ' County and City']
     
-    # For now, let's create a placeholder function
-    # You'll need to replace this with actual FIPS data
+    county_clean = str(county_name)
+    for suffix in suffixes:
+        if county_clean.lower().endswith(suffix.lower()):
+            county_clean = county_clean[:-len(suffix)]
+            break
     
+    # Special cases
+    special_cases = {
+        'DEKALB': 'DeKalb',
+        'DU PAGE': 'DuPage',
+        'LA SALLE': 'LaSalle',
+        'MCLEAN': 'McLean',
+        # Add more as needed
+    }
+    
+    if county_clean.upper() in special_cases:
+        county_clean = special_cases[county_clean.upper()]
+    
+    return county_clean.strip()
+
+def get_state_abbreviation_map():
+    """Get mapping of state abbreviations to full names"""
+    return {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+        'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+        'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+        'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+        'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+        'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+        'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+        'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+        'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+        'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+        'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+        'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+        'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia',
+        'AS': 'American Samoa', 'GU': 'Guam', 'MP': 'Northern Mariana Islands',
+        'PR': 'Puerto Rico', 'VI': 'Virgin Islands'
+    }
+
+def add_county_fips_mapping_fallback(county_df):
+    """
+    Fallback method using census data if addfips is not available
+    """
     county_df = county_df.copy()
     
-    # Create combined FIPS (2-digit state + 3-digit county)
-    # This is a placeholder - you need actual county FIPS codes
-    # Example approach if you have mapping:
+    # URL for census county FIPS data
+    fips_url = 'https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt'
     
-    # Load county FIPS mapping (you'll need to provide this)
-    # county_fips_map = load_county_fips_mapping()  # Dict with (state, county) -> fips
-    
-    # Apply mapping
-    # county_df['county_fips'] = county_df.apply(
-    #     lambda row: county_fips_map.get((row['state'], row['county']), None), axis=1
-    # )
-    
-    # Temporary: create a simple row number as placeholder
-    county_df['county_fips'] = range(1, len(county_df) + 1)
-    county_df['combined_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
-    
-    return county_df
+    try:
+        # Load census county FIPS data
+        fips_df = pd.read_csv(fips_url, header=None, dtype=str)
+        fips_df.columns = ['state_abbr', 'state_fips', 'county_fips', 'county_name', 'class_fips']
+        
+        # Create full FIPS (state_fips + county_fips)
+        fips_df['full_fips'] = (fips_df['state_fips'] + fips_df['county_fips']).astype(int)
+        
+        # Create mapping dictionary
+        county_df['county_upper'] = county_df['county'].str.upper().str.strip()
+        fips_df['county_upper'] = fips_df['county_name'].str.upper().str.strip()
+        
+        # Merge to get FIPS codes
+        merged = county_df.merge(
+            fips_df[['state_abbr', 'county_upper', 'full_fips']],
+            left_on=['state', 'county_upper'],
+            right_on=['state_abbr', 'county_upper'],
+            how='left'
+        )
+        
+        county_df['county_fips'] = merged['full_fips']
+        
+        # Remove rows with no FIPS code
+        null_fips = county_df['county_fips'].isna().sum()
+        if null_fips > 0:
+            print(f"Warning: {null_fips} counties could not be matched to FIPS codes")
+            county_df = county_df.dropna(subset=['county_fips'])
+        
+        # Ensure integer type
+        county_df['county_fips'] = county_df['county_fips'].astype(int)
+        county_df['combined_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+        
+        # Drop temporary column
+        county_df = county_df.drop('county_upper', axis=1)
+        
+        return county_df
+        
+    except Exception as e:
+        print(f"Error loading FIPS data: {e}")
+        print("Creating manual mapping for demonstration...")
+        
+        # Manual mapping for common counties as last resort
+        manual_fips = create_manual_fips_mapping()
+        
+        county_df['county_fips'] = county_df.apply(
+            lambda row: manual_fips.get((row['state'], row['county'].upper()), None),
+            axis=1
+        )
+        
+        null_fips = county_df['county_fips'].isna().sum()
+        if null_fips > 0:
+            print(f"Warning: {null_fips} counties could not be matched")
+            print("Removing unmatched counties...")
+            county_df = county_df.dropna(subset=['county_fips'])
+        
+        county_df['county_fips'] = county_df['county_fips'].astype(int)
+        county_df['combined_fips'] = county_df['county_fips'].astype(str).str.zfill(5)
+        
+        return county_df
 
+def create_manual_fips_mapping():
+    """Create a small manual FIPS mapping as absolute last resort"""
+    # This is just a starter - you'd need to expand this significantly
+    return {
+        ('TX', 'HARRIS'): 48201,
+        ('CA', 'LOS ANGELES'): 6037,
+        ('IL', 'COOK'): 17031,
+        ('AZ', 'MARICOPA'): 4013,
+        ('CA', 'SAN DIEGO'): 6073,
+        ('CA', 'ORANGE'): 6059,
+        ('FL', 'MIAMI-DADE'): 12086,
+        ('TX', 'DALLAS'): 48113,
+        ('WA', 'KING'): 53033,
+        ('CA', 'SAN BERNARDINO'): 6071,
+        # Add more as needed...
+    }
 
 def aggregate_by_chemical_county(df):
     """
@@ -670,6 +823,73 @@ def get_top_counties_by_state(df, state_abbr, top_n=10):
     
     return top_counties
 
+def prepare_top_chemicals_per_county(df, county_df, top_n=8):
+    """
+    Pre-compute top chemicals for each county for dashboard visualization
+    
+    Parameters:
+        df: DataFrame from fetch_waste_data()
+        county_df: DataFrame from aggregate_by_county() (contains county_fips)
+        top_n: Number of top chemicals per county
+    
+    Returns:
+        DataFrame with top chemicals per county including 'Other Chemicals' category
+    """
+    df = df.copy()
+    
+    # Create a mapping for county FIPS codes
+    county_info = county_df[['state', 'county', 'county_fips']].drop_duplicates()
+    
+    # Aggregate to county-chemical level
+    county_chemical = df.groupby(['state', 'county', 'tri_chem_id', 'chem_name'], as_index=False).agg({
+        'total_release': 'sum'
+    })
+    
+    # Merge with county info to add county_fips
+    county_chemical = county_chemical.merge(county_info, on=['state', 'county'], how='left')
+    
+    # Drop any rows where county_fips is NaN
+    county_chemical = county_chemical.dropna(subset=['county_fips'])
+    
+    # Get top N chemicals per county
+    top_chemicals_per_county = []
+    
+    for (state, county) in county_chemical[['state', 'county']].drop_duplicates().values:
+        county_data = county_chemical[(county_chemical['state'] == state) & (county_chemical['county'] == county)].copy()
+        
+        # Ensure we have data for this county
+        if len(county_data) == 0:
+            continue
+            
+        top_n_county = county_data.nlargest(top_n, 'total_release')
+        
+        # Add "Other" category for remaining chemicals
+        other_total = county_data[~county_data['chem_name'].isin(top_n_county['chem_name'])]['total_release'].sum()
+        
+        if other_total > 0:
+            # Get county info for the other row
+            county_info_rows = county_info[(county_info['state'] == state) & (county_info['county'] == county)]
+            if len(county_info_rows) > 0:
+                county_info_row = county_info_rows.iloc[0]
+                other_row = pd.DataFrame({
+                    'state': [state],
+                    'county': [county],
+                    'county_fips': [county_info_row['county_fips']],
+                    'tri_chem_id': ['OTHER'],
+                    'chem_name': ['Other Chemicals'],
+                    'total_release': [other_total]
+                })
+                top_n_county = pd.concat([top_n_county, other_row], ignore_index=True)
+        
+        top_chemicals_per_county.append(top_n_county)
+    
+    # Combine all counties
+    if top_chemicals_per_county:
+        result_df = pd.concat(top_chemicals_per_county, ignore_index=True)
+    else:
+        result_df = pd.DataFrame(columns=['state', 'county', 'county_fips', 'tri_chem_id', 'chem_name', 'total_release'])
+    
+    return result_df
 
 def inspect_county_data(county_df):
     """Print summary of county waste data"""

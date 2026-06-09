@@ -3,160 +3,6 @@ from vega_datasets import data
 import TRI_data_processing as tdp
 import pandas as pd
 
-def create_interactive_state_dashboard(state_df, chemical_df=None, top_chemicals_n=8):
-    """
-    Create an interactive dashboard with state map, waste type breakdown, and chemical composition
-    
-    Parameters:
-        state_df: DataFrame with state_fips, total_release, total_air_release, 
-                  total_water_release, total_land_release, state_name
-        chemical_df: DataFrame from aggregate_by_chemical() or get_top_chemicals_by_state()
-        top_chemicals_n: Number of top chemicals to show in pie chart (default: 8)
-    
-    Returns:
-        Interactive Altair dashboard
-    """
-    # Create selection for states
-    selection = alt.selection_point(fields=['state_fips'], empty='all')
-    
-    # Prepare waste type data for all states (for linked bar chart)
-    waste_data = []
-    for _, row in state_df.iterrows():
-        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
-                          'type': 'Air', 'amount': row['total_air_release']})
-        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
-                          'type': 'Water', 'amount': row['total_water_release']})
-        waste_data.append({'state': row['state_name'], 'state_fips': row['state_fips'], 
-                          'type': 'Land', 'amount': row['total_land_release']})
-    
-    waste_df = pd.DataFrame(waste_data)
-    us_states = alt.topo_feature(data.us_10m.url, feature='states')
-    
-    # Base choropleth map
-    base_map = alt.Chart(us_states).mark_geoshape(
-        stroke='black',
-        strokeWidth=0.5
-    ).transform_lookup(
-        lookup='id',
-        from_=alt.LookupData(state_df, key='state_fips', 
-                           fields=['total_release', 'state_name', 'state_fips'])
-    ).encode(
-        color=alt.Color('total_release:Q',
-                       scale=alt.Scale(scheme='reds', type='symlog', constant=1),
-                       title="Total Waste Release (lbs)",
-                       legend=alt.Legend(format='.0f')),
-        tooltip=[
-            alt.Tooltip('state_name:N', title="State:"),
-            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
-        ],
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.4))
-    ).add_params(
-        selection
-    ).properties(
-        width=700,
-        height=500,
-        title={
-            "text": "US Toxic Waste Release Interactive Dashboard",
-            "subtitle": "Click on any state to see detailed waste type breakdown and chemical composition",
-            "fontSize": 16,
-            "anchor": "middle"
-        }
-    ).project('albersUsa')
-    
-    # Stacked bar chart for waste type breakdown (filtered by selection)
-    stacked_chart = alt.Chart(waste_df).mark_bar().encode(
-        x=alt.X('type:N', 
-                title='Waste Type',
-                axis=alt.Axis(labelAngle=0)),
-        y=alt.Y('amount:Q', 
-                title='Release Amount (lbs)',
-                axis=alt.Axis(format='.0f')),
-        color=alt.Color('type:N', 
-                       scale=alt.Scale(scheme='category10'),
-                       title='Waste Type',
-                       legend=None),
-        tooltip=['state:N', 'type:N', 'amount:Q']
-    ).transform_filter(
-        selection
-    ).properties(
-        width=300,
-        height=250,
-        title='Waste Type Breakdown for Selected State'
-    )
-    
-    # Dynamic title showing selected state for chemical pie chart
-    selected_state_text = alt.Chart(state_df).mark_text(
-        align='center',
-        fontSize=14,
-        fontWeight='bold'
-    ).encode(
-        text=alt.condition(selection, alt.Text('state_name:N'), alt.value('No State Selected'))
-    ).transform_filter(
-        selection
-    ).properties(
-        width=400,
-        height=30
-    )
-    
-    # Create chemical pie chart (filtered by selection)
-    # We need to pre-calculate top chemicals for each state or compute on the fly
-    if chemical_df is None:
-        # Option 1: Pre-calculate top chemicals for all states
-        chemical_pie_chart = create_chemical_pie_chart_from_state_df(state_df, selection, top_chemicals_n)
-    else:
-        # Option 2: Use provided chemical_df
-        chemical_pie_chart = create_chemical_pie_chart_from_chemical_df(chemical_df, selection, top_chemicals_n)
-    
-    # Horizontal bar chart for top states (highlighting selection)
-    top_states = state_df.nlargest(15, 'total_release').copy()
-    
-    bar_chart = alt.Chart(top_states).mark_bar(
-        cornerRadiusTopRight=5,
-        cornerRadiusBottomRight=5
-    ).encode(
-        x=alt.X('total_release:Q', 
-                title='Total Waste Release (lbs)',
-                axis=alt.Axis(format='.0f')),
-        y=alt.Y('state_name:N', 
-                sort='-x', 
-                title='State',
-                axis=alt.Axis(labelLimit=300)),
-        color=alt.condition(selection, 
-                           alt.Color('total_release:Q', scale=alt.Scale(scheme='reds')), 
-                           alt.value('lightgray')),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.5)),
-        tooltip=[
-            alt.Tooltip('state_name:N', title='State'),
-            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
-        ]
-    ).add_params(
-        selection
-    ).properties(
-        width=350,
-        height=350,
-        title='Top 15 States by Total Waste (Click to select)'
-    )
-    
-    # Combine right panel (bar chart + chemical pie)
-    right_panel = alt.vconcat(
-        bar_chart,
-        selected_state_text,
-        chemical_pie_chart
-    )
-    
-    # Combine all charts in a dashboard layout
-    dashboard = alt.vconcat(
-        base_map,
-        alt.hconcat(stacked_chart, right_panel)
-    ).configure_view(
-        stroke=None
-    ).configure_legend(
-        titleFontSize=12,
-        labelFontSize=11
-    )
-    
-    return dashboard
-
 
 def create_chemical_pie_chart_from_state_df(state_df, selection, top_n=8):
     """
@@ -389,343 +235,354 @@ def final_state_map_output(choices = 'After'):
     # Save
     if choices == 'After':
         enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_2020s.html')
+        enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_2020s.png')
+
     else:
         enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_Throughout.html')
+        enhanced_dashboard.save('Frontend/chart/state_map/TRI_State_Map_Dashboard_Throughout.png')
+
 
 
 #--------------------------------------COUNTY--------------------------------------------
-def create_county_background_map(width=800, height=600):
-    """Create county background map"""
-    counties = alt.topo_feature(data.us_10m.url, feature='counties')
+import altair as alt
+from vega_datasets import data
+import pandas as pd
+import TRI_data_processing as tdp
+import json
+import requests
+
+def create_county_dashboard(df, county_df, top_n_counties=15, top_n_chemicals=8):
+    """
+    Create an interactive county-level dashboard for the entire US showing ALL counties
+    with connected map, charts, and pie chart
+    """
     
-    background = alt.Chart(counties).mark_geoshape(
-        fill='lightgray',
-        stroke='white'
-    ).project('albersUsa').properties(
-        width=width,
-        height=height
+    # Pre-compute top chemicals per county
+    top_chemicals_df = tdp.prepare_top_chemicals_per_county(df, county_df, top_n_chemicals)
+    
+    print(f"Counties with waste data: {len(county_df)}")
+    print(f"States with data: {sorted(county_df['state'].unique())}")
+    
+    # Load the TopoJSON data and extract all county IDs
+    topo_url = data.us_10m.url
+    topo_response = requests.get(topo_url)
+    topo_data = topo_response.json()
+    
+    # Get all county geometries and their IDs
+    county_geoms = topo_data['objects']['counties']['geometries']
+    all_county_ids = [g['id'] for g in county_geoms]
+    
+    print(f"Total counties in TopoJSON: {len(all_county_ids)}")
+    
+    # Create a complete dataframe with ALL counties
+    all_counties_list = []
+    for county_id in all_county_ids:
+        # Check if this county has data
+        county_data = county_df[county_df['county_fips'] == county_id]
+        
+        if len(county_data) > 0:
+            row = county_data.iloc[0]
+            all_counties_list.append({
+                'id': county_id,
+                'total_release': float(row['total_release']),
+                'total_land_release': float(row['total_land_release']),
+                'total_water_release': float(row['total_water_release']),
+                'total_air_release': float(row['total_air_release']),
+                'county': row['county'],
+                'state': row['state'],
+                'has_data': True
+            })
+        else:
+            all_counties_list.append({
+                'id': county_id,
+                'total_release': 0,
+                'total_land_release': 0,
+                'total_water_release': 0,
+                'total_air_release': 0,
+                'county': f'County {county_id}',
+                'state': 'No Data',
+                'has_data': False
+            })
+    
+    all_counties_df = pd.DataFrame(all_counties_list)
+    
+    # Create a SINGLE selection that all components will share
+    county_selection = alt.selection_point(
+        fields=['id'],
+        empty='all',
+        on='click',
+        clear='dblclick',
+        name='county_select'
     )
     
-    return background
-
-
-def create_county_choropleth(county_df, width=800, height=600):
-    """Create county-level choropleth map"""
-    counties = alt.topo_feature(data.us_10m.url, feature='counties')
+    # Prepare waste type data
+    waste_data = []
+    for _, row in county_df.iterrows():
+        waste_data.append({'county_name': f"{row['county']}, {row['state']}", 
+                          'id': row['county_fips'],
+                          'type': 'Air', 'amount': row['total_air_release']})
+        waste_data.append({'county_name': f"{row['county']}, {row['state']}", 
+                          'id': row['county_fips'], 
+                          'type': 'Water', 'amount': row['total_water_release']})
+        waste_data.append({'county_name': f"{row['county']}, {row['state']}", 
+                          'id': row['county_fips'], 
+                          'type': 'Land', 'amount': row['total_land_release']})
     
-    choropleth = alt.Chart(counties).mark_geoshape().transform_lookup(
+    waste_df = pd.DataFrame(waste_data)
+    
+    # Load US counties TopoJSON
+    counties_topo = alt.topo_feature(topo_url, 'counties')
+    
+    # County choropleth map
+    county_map = alt.Chart(counties_topo).mark_geoshape(
+        stroke='white',
+        strokeWidth=0.5
+    ).transform_lookup(
         lookup='id',
         from_=alt.LookupData(
-            county_df,
-            key='county_fips',
-            fields=['total_release', 'county', 'state_name', 'county_fips']
+            all_counties_df, 
+            key='id',
+            fields=['total_release', 'county', 'state', 'has_data', 'total_land_release', 
+                   'total_water_release', 'total_air_release']
         )
-    ).properties(
-        width=width,
-        height=height
     ).encode(
-        color=alt.Color('total_release:Q',
-                       scale=alt.Scale(scheme='reds', type='symlog', constant=1),
-                       title='Total Waste Release (lbs)',
-                       legend=alt.Legend(format='.0f', tickCount=5, titleLimit=500)),
+        color=alt.condition(
+            alt.datum.has_data == True,
+            alt.Color('total_release:Q',
+                     scale=alt.Scale(
+                         scheme='blues', 
+                         type='symlog', 
+                         constant=1
+                     ),
+                     title="Total Waste Release (lbs)",
+                     legend=alt.Legend(format='.0f')),
+            alt.value('#f0f0f0')
+        ),
+        tooltip=[
+            alt.Tooltip('county:N', title="County:"),
+            alt.Tooltip('state:N', title="State:"),
+            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f'),
+            alt.Tooltip('has_data:N', title="Has Data:")
+        ],
+        strokeWidth=alt.condition(county_selection, alt.value(3), alt.value(0.5)),
+        stroke=alt.condition(county_selection, alt.value('red'), alt.value('white')),
+        opacity=alt.condition(county_selection, alt.value(1), alt.value(1))
+    ).add_params(
+        county_selection
+    ).properties(
+        width=1100,
+        height=650,
+        title={
+            "text": "US County Toxic Waste Release - All 50 States",
+            "subtitle": "Gray counties have no reported waste | Click any blue county or bar for details | Double-click to clear",
+            "fontSize": 16,
+            "anchor": "middle"
+        }
+    ).project(
+        type='albersUsa'
+    )
+    
+    # Stacked bar chart for waste type
+    stacked_chart = alt.Chart(waste_df).mark_bar().encode(
+        x=alt.X('type:N', title='Waste Type'),
+        y=alt.Y('amount:Q', title='Release Amount (lbs)', axis=alt.Axis(format='.0f')),
+        color=alt.Color('type:N', scale=alt.Scale(scheme='category10'), title='Waste Type', legend=None),
+        tooltip=['county_name:N', 'type:N', alt.Tooltip('amount:Q', format=',.0f')]
+    ).transform_filter(
+        county_selection
+    ).properties(
+        width=400,
+        height=350,
+        title='Waste Type Breakdown for Selected County'
+    )
+    
+    # Top counties bar chart
+    top_counties = county_df.nlargest(top_n_counties, 'total_release').copy()
+    top_counties['county_label'] = top_counties['county'] + ', ' + top_counties['state']
+    top_counties['id'] = top_counties['county_fips']
+    
+    bar_chart = alt.Chart(top_counties).mark_bar(
+        cornerRadiusTopRight=5,
+        cornerRadiusBottomRight=5
+    ).encode(
+        x=alt.X('total_release:Q', title='Total Waste Release (lbs)', axis=alt.Axis(format='.0f')),
+        y=alt.Y('county_label:N', sort='-x', title='County'),
+        color=alt.condition(county_selection, alt.value('steelblue'), alt.value('lightgray')),
+        opacity=alt.condition(county_selection, alt.value(1), alt.value(0.7)),
         tooltip=[
             alt.Tooltip('county:N', title='County'),
-            alt.Tooltip('state_name:N', title='State'),
-            alt.Tooltip('total_release:Q', title='Total Release', format=',.0f')
+            alt.Tooltip('state:N', title='State'),
+            alt.Tooltip('total_release:Q', title='Total Waste:', format=',.0f')
         ]
-    )
-    
-    return choropleth
-
-
-def add_county_interactive_stroke(choropleth, selection, hover_color='yellow', default_color='white'):
-    """Add interactive stroke to county choropleth"""
-    return choropleth.encode(
-        stroke=alt.condition(
-            selection,
-            alt.value(hover_color),
-            alt.value(default_color)
-        ),
-        strokeWidth=alt.condition(
-            selection,
-            alt.value(2),
-            alt.value(0.5)
-        )
-    )
-
-
-def total_waste_by_counties(choice=""):
-    """
-    County-level waste map with release type breakdown
-    """
-    county_df = tdp.get_county_waste_data(choice)
-    bar_data = tdp.get_county_release_type_data(county_df)
-    
-    print(f"Counties loaded: {len(county_df)}")
-    print(f"Total release sum: {county_df['total_release'].sum():,.0f}")
-    
-    MAP_WIDTH = 800
-    MAP_HEIGHT = 600
-    
-    point_hover = alt.selection_point(
-        fields=['county_fips'],
-        on='pointerover',
-        empty=False,
-        name='hover_county'
-    )
-    
-    background = create_county_background_map(MAP_WIDTH, MAP_HEIGHT)
-    
-    choropleth = create_county_choropleth(county_df, MAP_WIDTH, MAP_HEIGHT)
-    choropleth = add_county_interactive_stroke(choropleth, point_hover)
-    choropleth = choropleth.add_params(point_hover)
-    choropleth = choropleth.project('albersUsa').properties(
-        title='Total Waste Release by County'
-    )
-    
-    bars = create_release_type_bars(bar_data, point_hover).properties(
-        width=350,
-        height=250
-    )
-    
-    final_map = alt.hconcat(
-        background + choropleth,
-        bars
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=20
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
-    )
-    
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    final_map.save(f'Frontend/chart/total_waste_by_counties_{suffix}.html')
-    final_map.save(f'Frontend/chart/total_waste_by_counties_{suffix}.png')
-    
-    return final_map
-
-
-def chemical_indicators_by_county(choice=""):
-    """
-    County-level map with chemical indicators on click
-    """
-    county_df, indicator_counts = tdp.get_county_chemical_indicator_data(choice)
-    
-    print(f"Counties loaded: {len(county_df)}")
-    print(f"Indicator rows: {len(indicator_counts)}")
-    
-    MAP_WIDTH = 800
-    MAP_HEIGHT = 600
-    
-    click_select = alt.selection_point(
-        fields=['county_fips'],
-        on='click',
-        empty=False,
-        name='select_county'
-    )
-    
-    background = create_county_background_map(MAP_WIDTH, MAP_HEIGHT)
-    
-    choropleth = create_county_choropleth(county_df, MAP_WIDTH, MAP_HEIGHT)
-    choropleth = add_county_interactive_stroke(choropleth, click_select, hover_color='blue')
-    choropleth = choropleth.add_params(click_select)
-    choropleth = choropleth.project('albersUsa').properties(
-        title='Total Waste Release by County (Click for Chemical Indicators)'
-    )
-    
-    bars = create_chemical_indicator_bars_county(indicator_counts, click_select)
-    
-    final_map = alt.hconcat(
-        background + choropleth,
-        bars
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=20
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
-    )
-    
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    final_map.save(f'Frontend/chart/chemical_indicators_counties_{suffix}.html')
-    final_map.save(f'Frontend/chart/chemical_indicators_counties_{suffix}.png')
-    
-    return final_map
-
-
-def create_chemical_indicator_bars_county(indicator_counts, selection):
-    """
-    Create chemical indicator bars for county-level data
-    """
-    indicator_counts = indicator_counts.copy()
-    indicator_counts['has_indicator_label'] = indicator_counts['has_indicator'].map({
-        True: 'Yes',
-        False: 'No'
-    })
-    
-    bars = alt.Chart(indicator_counts).mark_bar().encode(
-        x=alt.X('indicator:N',
-                title=None,
-                sort=['CAAC', 'CARC', 'FEDS', 'PBT', 'PFAS'],
-                axis=alt.Axis(labelFontSize=12, labelAngle=0)),
-        y=alt.Y('count:Q',
-                title='Number of Chemicals',
-                axis=alt.Axis(format='d')),
-        color=alt.Color('has_indicator_label:N',
-                       scale=alt.Scale(
-                           domain=['No', 'Yes'],
-                           range=['#D3D3D3', '#006837']
-                       ),
-                       legend=alt.Legend(
-                           title='Has Indicator',
-                           symbolType='square'
-                       )),
-        xOffset=alt.XOffset('has_indicator_label:N',
-                           sort=['No', 'Yes']),
-        tooltip=[
-            alt.Tooltip('indicator:N', title='Indicator'),
-            alt.Tooltip('has_indicator_label:N', title='Present'),
-            alt.Tooltip('count:Q', title='Count', format='d')
-        ]
+    ).add_params(
+        county_selection
     ).properties(
-        width=350,
-        height=300,
-        title='Chemical Indicators (Click a County)'
-    ).transform_filter(
-        selection
+        width=450,
+        height=450,
+        title=f'Top {top_n_counties} Counties by Waste (Click to select)'
     )
     
-    return bars
-
-def combined_county_waste_dashboard(choice=""):
-    """
-    Combined county dashboard with both release types and chemical indicators
-    Hover: Shows release breakdown (Air, Land, Water)
-    Click: Shows chemical indicators (CAAC, CARC, FEDS, PBT, PFAS)
-    """
-    print("Loading county data...")
-    county_df = tdp.get_county_waste_data(choice)
-    bar_data = tdp.get_county_release_type_data(county_df)
-    
-    print("Loading chemical indicator data...")
-    _, indicator_counts = tdp.get_county_chemical_indicator_data(choice)
-    
-    print(f"\nDashboard Summary:")
-    print(f"  Counties: {len(county_df)}")
-    print(f"  Total Release: {county_df['total_release'].sum():,.0f} lbs")
-    print(f"  Indicator rows: {len(indicator_counts)}")
-    
-    MAP_WIDTH = 900
-    MAP_HEIGHT = 650
-    BAR_WIDTH = 400
-    RELEASE_BAR_HEIGHT = 250
-    INDICATOR_BAR_HEIGHT = 350
-    
-    point_hover = alt.selection_point(
-        fields=['county_fips'], 
-        on='pointerover', 
-        empty=False,
-        name='hover_county'
-    )
-    
-    click_select = alt.selection_point(
-        fields=['county_fips'], 
-        on='click', 
-        empty=False,
-        name='select_county'
-    )
-    
-    background = create_county_background_map(width=MAP_WIDTH, height=MAP_HEIGHT)
-    
-    choropleth = create_county_choropleth(county_df, width=MAP_WIDTH, height=MAP_HEIGHT)
-    
-    choropleth = choropleth.transform_calculate(
-        stroke_color="(select_county.county_fips && select_county.county_fips == datum.county_fips) ? 'blue' : "
-                     "(hover_county.county_fips && hover_county.county_fips == datum.county_fips) ? 'yellow' : "
-                     "'white'",
-        stroke_width="(select_county.county_fips && select_county.county_fips == datum.county_fips) ? 3 : "
-                     "(hover_county.county_fips && hover_county.county_fips == datum.county_fips) ? 2 : "
-                     "0.5"
+    # Dynamic title for pie chart
+    selected_county_text = alt.Chart(all_counties_df).mark_text(
+        align='center',
+        fontSize=14,
+        fontWeight='bold'
     ).encode(
-        stroke=alt.Stroke('stroke_color:N', scale=None, legend=None),
-        strokeWidth=alt.StrokeWidth('stroke_width:Q', scale=None, legend=None)
+        text=alt.condition(county_selection, alt.Text('county:N'), alt.value('Select a County'))
+    ).transform_filter(
+        county_selection
+    ).properties(
+        width=450,  # Match the width of the pie chart
+        height=30
     )
     
-    choropleth = choropleth.add_params(point_hover, click_select)
-    choropleth = choropleth.project('albersUsa').properties(
-        title=alt.TitleParams(
-            text='Total Waste Release by County',
-            subtitle=['Hover for release breakdown | Click for chemical indicators'],
-            fontSize=16,
-            anchor='start'
+    # Pie chart for top chemicals
+    if len(top_chemicals_df) > 0:
+        top_chemicals_for_pie = top_chemicals_df.copy()
+        top_chemicals_for_pie['id'] = top_chemicals_for_pie['county_fips']
+        
+        pie_chart = alt.Chart(top_chemicals_for_pie).mark_arc(
+            innerRadius=50,
+            stroke='white'
+        ).encode(
+            theta=alt.Theta('total_release:Q', stack=True),
+            color=alt.Color('chem_name:N', 
+                           scale=alt.Scale(scheme='tableau20'),
+                           legend=alt.Legend(title='Chemical', orient='right', columns=1)),
+            tooltip=['chem_name:N', alt.Tooltip('total_release:Q', format=',.0f')]
+        ).transform_filter(
+            county_selection
+        ).properties(
+            width=450,
+            height=370,  # Reduced height to fit better
+            title=f'Top {top_n_chemicals} Chemicals'
         )
+    else:
+        placeholder_data = pd.DataFrame({
+            'chem_name': ['No Data Available'],
+            'total_release': [1],
+            'id': [0]
+        })
+        pie_chart = alt.Chart(placeholder_data).mark_arc().encode(
+            theta='total_release:Q',
+            color=alt.Color('chem_name:N', title='Chemical'),
+            tooltip=['chem_name:N']
+        ).properties(
+            width=450,
+            height=370,
+            title='No Chemical Data Available'
+        )
+    
+    # NEW LAYOUT: Horizontal arrangement similar to state dashboard
+    # Bar chart on the left, Title + Pie chart on the right
+    middle_row = alt.hconcat(
+        bar_chart, 
+        alt.vconcat(selected_county_text, pie_chart)
     )
     
-    release_bars = create_release_type_bars(
-        bar_data, point_hover
-    ).properties(
-        width=BAR_WIDTH,
-        height=RELEASE_BAR_HEIGHT
-    )
+    # Combine stacked chart with the middle row
+    bottom_row = alt.hconcat(stacked_chart, middle_row)
     
-    indicator_bars = create_chemical_indicator_bars_county(
-        indicator_counts, click_select
-    ).properties(
-        width=BAR_WIDTH,
-        height=INDICATOR_BAR_HEIGHT
-    )
-    
-    bar_column = alt.vconcat(
-        release_bars,
-        indicator_bars
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
-    )
-    
-    final_dashboard = alt.hconcat(
-        background + choropleth,
-        bar_column
-    ).resolve_scale(
-        color='independent'
-    ).resolve_legend(
-        color='independent'
-    ).configure_concat(
-        spacing=30
-    ).configure_title(
-        fontSize=16,
-        anchor='start'
-    ).configure_axis(
-        labelFontSize=11,
-        titleFontSize=13
+    # Final dashboard
+    dashboard = alt.vconcat(
+        county_map,
+        bottom_row
+    ).configure_view(
+        stroke=None
     ).configure_legend(
-        labelFontSize=11,
-        titleFontSize=13
+        titleFontSize=11,
+        labelFontSize=10,
+        orient='right'
     )
     
-    suffix = '2020s' if choice == 'After' else 'all_time'
-    
-    print(f"\nSaving county dashboard...")
-    final_dashboard.save(
-        f'Frontend/chart/county_waste_dashboard_{suffix}.html'
-    )
-    final_dashboard.save(
-        f'Frontend/chart/county_waste_dashboard_{suffix}.png',
-        scale_factor=2.0
-    )
-    
-    print("County dashboard saved successfully!")
-    
-    return final_dashboard
+    return dashboard
 
-#combined_state_waste_dashboard()    
+def debug_county_ids():
+    """
+    Debug function to check the TopoJSON county IDs
+    """
+    import requests
+    import json
+    
+    # Load the TopoJSON data
+    url = data.us_10m.url
+    response = requests.get(url)
+    topojson_data = response.json()
+    
+    # Extract county geometries
+    counties = topojson_data['objects']['counties']['geometries']
+    
+    # Get a sample of county IDs
+    print("Sample of TopoJSON county IDs:")
+    for county in counties[:10]:
+        print(f"  ID: {county['id']}")
+    
+    print(f"\nTotal counties in TopoJSON: {len(counties)}")
+    print(f"ID type: {type(counties[0]['id'])}")
+    
+    # Check if IDs are strings or integers
+    id_types = set(type(c['id']) for c in counties)
+    print(f"ID types found: {id_types}")
+    
+    # Check if our data FIPS codes match
+    print("\nChecking ID format compatibility...")
+    print(f"First TopoJSON ID: {counties[0]['id']} (type: {type(counties[0]['id'])})")
 
-#combined_county_waste_dashboard()
+
+# Main execution
+def final_county_map_output(choices = ''):
+    print("Fetching data...")
+    df = tdp.fetch_waste_data(choice=choices)
+    county_df = tdp.aggregate_by_county(df)
+    
+    print(f"Counties with waste data: {len(county_df)}")
+    print(f"States with data: {sorted(county_df['state'].unique())}")
+    
+    # Debug: Check county FIPS format
+    print(f"\nSample county FIPS codes:")
+    print(county_df['county_fips'].head())
+    print(f"FIPS code type: {type(county_df['county_fips'].iloc[0])}")
+    print(f"Sample FIPS values: {county_df['county_fips'].head().tolist()}")
+    
+    # Run debug to check TopoJSON IDs
+    print("\nDebugging TopoJSON county IDs:")
+    debug_county_ids()
+    
+    # Check if FIPS codes match TopoJSON ID format
+    import requests
+    import json
+    topo_url = data.us_10m.url
+    topo_response = requests.get(topo_url)
+    topo_data = topo_response.json()
+    topo_ids = set(g['id'] for g in topo_data['objects']['counties']['geometries'])
+    
+    data_fips = set(county_df['county_fips'].dropna().unique())
+    
+    # Check for matches
+    matches = data_fips.intersection(topo_ids)
+    print(f"\nFIPS matching check:")
+    print(f"  TopoJSON IDs: {len(topo_ids)}")
+    print(f"  Data FIPS codes: {len(data_fips)}")
+    print(f"  Matches: {len(matches)}")
+    
+    if len(matches) == 0:
+        print("\nNO MATCHES FOUND! This is why the map isn't working.")
+        print(f"  Sample TopoJSON IDs: {list(topo_ids)[:5]}")
+        print(f"  Sample Data FIPS: {list(data_fips)[:5]}")
+        print("\n  The FIPS codes don't match. Check your add_county_fips_mapping function!")
+    else:
+        print(f"  Sample matches: {list(matches)[:5]}")
+    
+    # Create dashboard
+    print("\nCreating county dashboard (showing ALL counties)...")
+    dashboard = create_county_dashboard(df, county_df, top_n_counties=15, top_n_chemicals=8)
+    
+    if choices == 'After':    
+        dashboard.save('Frontend/chart/county_map/TRI_County_Map_Dashboard_2020s.html')
+        dashboard.save('Frontend/chart/county_map/TRI_County_Map_Dashboard_2020s.png')
+    else:
+        dashboard.save('Frontend/chart/county_map/TRI_County_Map_Dashboard_Throughout.html')
+        dashboard.save('Frontend/chart/county_map/TRI_County_Map_Dashboard_Throughout.png')
+
+    
+    dashboard.show()

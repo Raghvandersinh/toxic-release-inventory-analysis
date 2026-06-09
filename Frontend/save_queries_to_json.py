@@ -12,7 +12,6 @@ queries = {
                 tri_chem_id
             FROM tri_reporting_form trf
             JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num
-            Where trf.reporting_year >= 2020
             GROUP BY trf.tri_facility_id, tri_chem_id
             HAVING SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) <> 0
             Order By total_release DESC
@@ -40,7 +39,7 @@ queries = {
         tci.pfas_ind
         FROM sort_by_location sbl
         JOIN tri_chem_info tci ON sbl.tri_chem_id = tci.tri_chem_id
-        Order By sbl.total_release;
+        Order By sbl.total_release DESC;
 """,
     
     "Waste_By_Location_2020s": 
@@ -51,11 +50,11 @@ queries = {
                 ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
                 ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
                 ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release,
-                tri_chem_id
+                trf.tri_chem_id
             FROM tri_reporting_form trf
             JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num
             Where trf.reporting_year >= 2020
-            GROUP BY trf.tri_facility_id, tri_chem_id
+            GROUP BY trf.tri_facility_id, trf.tri_chem_id
             HAVING SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) <> 0
             Order By total_release DESC
         ),
@@ -67,7 +66,7 @@ queries = {
                ROUND(SUM(gwd.total_water_release),2) as total_water_release, 
                tri_chem_id
             FROM tri_facility_history tfh
-            JOIN get_waste_data gwd ON gwd.tri_facility_id = tfh.tri_facility_id
+            JOIN get_waste_data gwd ON gwd.tri_facility_id = tfh.tri_facility_id 
             GROUP BY tfh.city, tfh.county, tfh.state, gwd.tri_chem_id
             HAVING SUM(gwd.total_release) <> 0
             ORDER BY total_release
@@ -82,7 +81,7 @@ queries = {
         tci.pfas_ind
         FROM sort_by_location sbl
         JOIN tri_chem_info tci ON sbl.tri_chem_id = tci.tri_chem_id
-        Order By sbl.total_release;
+        Order By sbl.total_release DESC;
     """,
 
     "Total_Waste_Throughout_top_10": 
