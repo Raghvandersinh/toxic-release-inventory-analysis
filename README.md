@@ -126,6 +126,20 @@
 
 1. What County has the most pounds of waste throughout the years (Ranks 1 to Rank 5)?
     1. NorthWest Artic
+        Has Approximately 478 billion lbs of waste, containing majority of chemicals such as 274 billion of Zinc and 190 billion lbs of lead. Majority of waste is land based 476 billion lbs.
+        ![alt text](Frontend/chart/county_map/Northwest_Artic.png)
+    2. Salt Lake, UT
+        Has Approximately 183 billion lbs of waste, containing majority of chemicals such as 75 billion of Copper and 70 billion lbs of lead. Majority of waste is land based 175 billion lbs.
+        ![alt text](Frontend/chart/county_map/Salt_Lake_Utah.png)
+    3. Gila, AZ:
+        Has Approximately 89 billion lbs of waste, containing majority of chemicals such as 38 billion of Zinc and 25 billion lbs of Zinc. Majority of waste is land based 87 billion lbs.
+        ![alt text](Frontend/chart/county_map/Gila_AZ.png)
+    4. San Bernerdino, CA:
+        Has Approximately 81 billion lbs of waste, containing majority of chemicals such as 78 billion of Sodium Sulphate. Majority of waste is water based 55 billion lbs.
+        ![alt text](Frontend/chart/county_map/San_Bernerdino_CA.png)
+    5. Humboldt, NV:
+        Has Approximately 71 billion lbs of waste, containing majority of chemicals such as 48 billion of Arsenic. Majority of waste is land based 71 billion lbs.
+        ![alt text](Frontend/chart/county_map/Humboldt_NV.png)
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
 
