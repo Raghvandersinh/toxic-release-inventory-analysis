@@ -76,10 +76,56 @@
         https://www.epa.gov/enforcement/case-summary-asarco-2009-bankruptcy-settlement
         https://www.corpwatch.org/sites/default/files/Barrick%27s%20Dirty%20Secrets.pdf
     
-    5. **Freeport Mc**
+    5. **Freeport McMoRan**
         
-        
+        There was a huge spike between 1997-2000. 
+        According to Earthworks, Freeport sends more than 76 million metric tons of tailings and waste rock into Indonesian rivers every year. The company puts the 2017 figure at 50 million tons. Without spelling out precisely how the requirement should be met, Indonesia told Freeport that it would boost to 95 percent from half the amount of tailings that must be recovered from the river system, according to Adkerson. 
+
+        Billions of gallons of sludge escaped to travel hundreds of kilometers down the Doce river, killing at least 19 people and leaving hundreds homeless.
+
+        Freeport Mine dumps around 10, 000 tons of toxic waste per day in previous years, now it
+        has reached 300,000 tons per day. The tailings are channelled through the Ajkwa river, which
+        is located east of the city of Timika
+
+        ![alt text](Frontend/chart/Freeport_McMoRan.png)
+        https://www.ohchr.org/sites/default/files/2022-06/Solidarity%20for%20Indigenous%20Papuans1.pdf
+        https://www.mining.com/web/giant-mine-spewing-waste-decades-turns-battleground/
+
+1. What State has the most pounds of waste throughout the years (Ranks 1 to Rank 5)?
+    1. Alaska:
+        Has approximately 532 billion lbs of waste, containing majority of chemicals such as 291 billion lbs of Zinc and 200 billion lbs of lead. Majortiy of the waste are land based where 527 billion lbs of land waste. From our facility Analysis we determined that Cominco Alasaka Inc were mostly involved in polluting the lands. 
+        ![alt text](Frontend/chart/state_map/Alsaka_Waste.png)
+
+    2. Texas:
+        Has Approximately 387 billion lbs of waste, containing majority of chemicals such as 69 billion of ammonia and 27 billion of Nitrate and Aluminum. Majority of waste is land based 201 billion lbs, but also has 100 billion lbs of Air waste. Since Texas has a lax regulatory enviroment laws where its easy for polluting facilities to dump waste as long as they have permits. 
+        ![alt text](Frontend/chart/state_map/Texas_Waste.png)
     
+    3. Louisanna:
+        Is right next to Texas has approximately 315 billion lbs of waste, containing majortiy of chemicals similar to Texas 48 billion of ammonia but has 30 billion lbs of sulphuric acid  and 35 billion lbs of phospheric acid instead of Nitrate and Aluminum. Majority of waste is land based approximately 147 billion lbs, but water 74 billion lbs and air 79 billion lbs are not far behind. 
+        
+        Lousianna contains 25% of U.S's petrochemical products. harming air, water, and soils. has extreme air pollution enough to cause cancer, reproductive, maternal, newborn, and respiratory health harm.  
+
+        https://publichealth.jhu.edu/2025/the-shocking-hazards-of-louisianas-cancer-alley
+        ![alt text](Frontend/chart/state_map/Louisanna_Waste.png)
+    
+    4. Utah:
+        Has Approximately 250 billion lbs of waste, containing majority of chemicals such as 76 billion of Copper and 72 billion of Lead and 39 billion lbs of Cholrine. Majority of waste is land based 190 billion lbs, but also has 48 billion lbs of Air waste.
+
+        'from a team at Utah State University documents the ways metal-laden dust from the drying lakebed may find its way into human bodies — directly through ingestion and indirectly through food systems...Sediments produced by the dry playa around Great Salt Lake have been contaminated by a century of mining, waste disposal, oil refining and other human activities.'(Gilbert)
+
+        https://www.usu.edu/today/story/new-research-toxins-from-great-salt-lake-dust-absorbed-by-plants-soils-human-bodies
+        ![alt text](Frontend/chart/state_map/Utah_Waste.png)
+    
+    5. Ohio
+        Has Approximately 222 billion lbs of waste, containing majority of chemicals such as 22 billion of Hydrocholoric acid and 20 billion of Zinc and 19 billion lbs of Ammonia. Majority of waste is air based 86 billion lbs, but also has 72 billion lbs of land waste.
+
+        'EPA estimates 20,000 gallons of hazardous waste is stored in various containers on the site, including chromium, lead, arsenic, various acids, and cyanide salts. Not all containers are labeled, and some containers are missing tops or lids. Improperly storing these materials could result in the release of hazardous substances into the environment.' (EPA) From Woodwill planting works
+
+        https://www.epa.gov/newsreleases/epa-begins-removing-hazardous-waste-woodhill-plating-works-facility-cleveland-ohio
+        ![alt text](Frontend/chart/state_map/Ohio_Waste.png)
+
+1. What County has the most pounds of waste throughout the years (Ranks 1 to Rank 5)?
+    1. NorthWest Artic
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
 
