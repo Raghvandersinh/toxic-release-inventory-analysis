@@ -4,6 +4,7 @@
 
 ### This goal of this project is answer questions such as:
 
+#### Basic Profiling:
 1. What facility was involved in dumping the most pounds of waste throughout the years (Ranks 1 to Rank 5)?
     1. **1998-2024 (Cominco Alasaka Inc, Well known as Red Dog Mine)**:
         * According to our graph. From 1998 - 2014 we see an upward trend of total releases and 2014 - 2024 we see an up and down spikes. So whats happening here? ![alt text](Frontend/chart/Comico_Alaska.png)
@@ -126,13 +127,19 @@
 
 1. What County has the most pounds of waste throughout the years (Ranks 1 to Rank 5)?
     1. NorthWest Artic
-        Has Approximately 478 billion lbs of waste, containing majority of chemicals such as 274 billion of Zinc and 190 billion lbs of lead. Majority of waste is land based 476 billion lbs.
+        Has Approximately 478 billion lbs of waste, containing majority of chemicals such as 274 billion of Zinc and 190 billion lbs of lead. Majority of waste is land based 476 billion lbs. We determined that Red Dog Operations were the main culprit of dumping waste billions of waste in Alaska. 
         ![alt text](Frontend/chart/county_map/Northwest_Artic.png)
     2. Salt Lake, UT
         Has Approximately 183 billion lbs of waste, containing majority of chemicals such as 75 billion of Copper and 70 billion lbs of lead. Majority of waste is land based 175 billion lbs.
+        According to my database most of the waste camefrom mining facilities such as Rio Tinto America
+        and Kennecott Holdings Corp(Which is also owned by Rio Tinto)
+        
+        According to EPA "​​The Kennecott South Zone includes the Bingham Mining District in the Oquirrh Mountains. This is about 25 miles southwest of Salt Lake City, Utah...Mining activities at the site began in the 1860s and continue today. The waste from the mining contains hazardous substances, including heavy metals. Soils, sludge, surface water and groundwater are contaminated."
+        https://cumulis.epa.gov/supercpad/SiteProfiles/index.cfm?fuseaction=second.cleanup&id=0800601
         ![alt text](Frontend/chart/county_map/Salt_Lake_Utah.png)
     3. Gila, AZ:
         Has Approximately 89 billion lbs of waste, containing majority of chemicals such as 38 billion of Zinc and 25 billion lbs of Zinc. Majority of waste is land based 87 billion lbs.
+        According to my Database Most of the Waste came from Mining Facilities, such as Freeport-McMoRan Inc and Americas Mining Corp
         ![alt text](Frontend/chart/county_map/Gila_AZ.png)
     4. San Bernerdino, CA:
         Has Approximately 81 billion lbs of waste, containing majority of chemicals such as 78 billion of Sodium Sulphate. Majority of waste is water based 55 billion lbs.
@@ -140,6 +147,8 @@
     5. Humboldt, NV:
         Has Approximately 71 billion lbs of waste, containing majority of chemicals such as 48 billion of Arsenic. Majority of waste is land based 71 billion lbs.
         ![alt text](Frontend/chart/county_map/Humboldt_NV.png)
+
+
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
 

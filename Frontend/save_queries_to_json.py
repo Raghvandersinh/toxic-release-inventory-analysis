@@ -144,49 +144,67 @@ queries = {
     
     "Total_Waste_Top_10_Vs_Rest_Facilities":
         """
-        WITH latest_facility_location AS (
+        WITH distinct_facility AS (
             SELECT DISTINCT ON (tri_facility_id) 
                 tri_facility_id,
-                epa_standardized_parent
+                CASE
+                    WHEN parent_name IS NOT NULL 
+                        AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
+                        THEN parent_name
+                    WHEN epa_standardized_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_parent
+                    WHEN name IS NOT NULL 
+                        AND UPPER(name) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN name
+                    WHEN epa_standardized_foreign_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_foreign_parent
+                    ELSE NULL
+                END AS facility_name
             FROM tri_facility_history
-            ORDER BY tri_facility_id, create_date DESC
+            ORDER BY tri_facility_id
         ),
-        ranked_facilities AS (
+        get_doc_ctrl_num AS (
+            Select df.facility_name, df.tri_facility_id, trf.doc_ctrl_num From distinct_facility df
+            Join tri_reporting_form trf ON trf.tri_facility_id = df.tri_facility_id
+        ),
+        ranked_facilities AS(
             SELECT 
-                trf.tri_facility_id,
+                gd.facility_name,
                 SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) AS total_release,
                 RANK() OVER (ORDER BY SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) DESC) AS rank
-            FROM tri_reporting_form trf
-            JOIN tri_form_total tft ON trf.doc_ctrl_num = tft.doc_ctrl_num
-            GROUP BY trf.tri_facility_id
+            FROM get_doc_ctrl_num gd
+            JOIN tri_form_total tft ON gd.doc_ctrl_num = tft.doc_ctrl_num
+            GROUP BY gd.facility_name
         ),
         total_waste AS (
             SELECT SUM(total_release) AS grand_total
             FROM ranked_facilities
         )
-        SELECT 
+        SELECT DISTINCT
             'Top 10 Facilities' AS category,
             COUNT(*) AS num_facilities,
             ROUND(SUM(rf.total_release), 2) AS total_release,
-            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100, 2) AS percentage_of_total
+            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100.0, 2) AS percentage_of_total
         FROM ranked_facilities rf
         CROSS JOIN total_waste tw
         WHERE rf.rank <= 10
 
         UNION ALL
 
-        SELECT 
+        SELECT DISTINCT
             'All Other Facilities' AS category,
             COUNT(*) AS num_facilities,
             ROUND(SUM(rf.total_release), 2) AS total_release,
-            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100, 2) AS percentage_of_total
+            ROUND((SUM(rf.total_release) / MAX(tw.grand_total)) * 100.0, 2) AS percentage_of_total
         FROM ranked_facilities rf
         CROSS JOIN total_waste tw
         WHERE rf.rank > 10
 
         UNION ALL
 
-        SELECT 
+        SELECT DISTINCT
             'TOTAL' AS category,
             COUNT(*) AS num_facilities,
             ROUND(SUM(rf.total_release), 2) AS total_release,
@@ -201,42 +219,44 @@ for x in queries:
 with open('queries.json', 'w') as f:
     json.dump(queries, f, indent=4)
 
-"""
-        WITH get_waste_data AS (
-            SELECT trf.tri_facility_id, 
-                ROUND(SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC), 2) AS total_release,
-                ROUND(SUM(tft.total_land_release::NUMERIC),2) as total_land_release,
-                ROUND(SUM(tft.total_air_release::NUMERIC),2) as total_air_release,
-                ROUND(SUM(tft.total_water_release::NUMERIC),2) as total_water_release,
-                tri_chem_id
-            FROM tri_reporting_form trf
-            JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num
-            GROUP BY trf.tri_facility_id, tri_chem_id
-            HAVING SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) <> 0
-            Order By total_release DESC
-        ),
-        sort_by_location AS(
-        Select tfh.city, tfh.county, tfh.state, 
-               Round(SUM(gwd.total_release), 2) as total_release, 
-               Round(SUM(gwd.total_land_release), 2) as total_land_release, 
-               Round(SUM(gwd.total_air_release),2) as total_air_release,
-               ROUND(SUM(gwd.total_water_release),2) as total_water_release, 
-               tri_chem_id
-            FROM tri_facility_history tfh
-            JOIN get_waste_data gwd ON gwd.tri_facility_id = tfh.tri_facility_id
-            GROUP BY tfh.city, tfh.county, tfh.state, gwd.tri_chem_id
-            HAVING SUM(gwd.total_release) <> 0
-            ORDER BY total_release
-        )
-        SELECT sbl.*, 
-        tci.chem_name, 
-        tci.caac_ind, 
-        tci.carc_ind,
-        tci.feds_ind,
-        tci.metal_ind,
-        tci.pbt_ind,
-        tci.pfas_ind
-        FROM sort_by_location sbl
-        JOIN tri_chem_info tci ON sbl.tri_chem_id = tci.tri_chem_id
-        Order By sbl.total_release;
-"""
+'''
+
+'''
+
+'''
+Select_Individaul_County
+WITH distinct_facility AS (
+            SELECT DISTINCT ON(tri_facility_id)
+                tri_facility_id as id,
+                CASE
+                    WHEN parent_name IS NOT NULL 
+                        AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
+                        THEN parent_name
+                    WHEN epa_standardized_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_parent
+                    WHEN name IS NOT NULL 
+                        AND UPPER(name) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN name
+                    WHEN epa_standardized_foreign_parent IS NOT NULL 
+                        AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
+                        THEN epa_standardized_foreign_parent
+                    ELSE NULL
+                END AS facility_name,
+                city,
+                county,
+                state
+            FROM tri_facility_history 
+    ),
+    get_sum_total_waste AS(
+        SELECT trf.tri_facility_id, trf.tri_chem_id, 
+        SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) OVER(partition by trf.tri_facility_id, trf.tri_chem_id) AS total_release
+        FROM tri_reporting_form trf
+        JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num   
+    )
+    Select DISTINCT df.facility_name, df.city, df.county, df.state, gs.total_release, tci.chem_name FROM distinct_facility df
+    JOIN get_sum_total_waste gs ON gs.tri_facility_id = df.id
+    JOIN tri_chem_info tci ON tci.tri_chem_id = gs.tri_chem_id
+    WHERE df.county LIKE '%GILA%'
+    ORDER BY gs.total_release DESC;
+'''

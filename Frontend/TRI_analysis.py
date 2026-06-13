@@ -152,11 +152,91 @@ def total_waste_througout_from_top_10_facility_chart_generator_interactive():
     return total_waste_throughout_top_10_chart
 
 
+def total_waste_top_10_vs_rest_facilities_pie_chart():
+    df = pd.read_sql(queries['Total_Waste_Top_10_Vs_Rest_Facilities'], con=engine)
+    top_10_vs_rest_df = df.drop(index=2)  # Remove TOTAL row
+    total = df.drop(index=[0, 1])  # Keep TOTAL row for reference
+    
+    print(df.head())
+    
+    # Calculate the midpoint angle for each slice to center the text
+    top_10_vs_rest_df['mid_angle'] = top_10_vs_rest_df['percentage_of_total'].cumsum() - top_10_vs_rest_df['percentage_of_total'] / 2
+    
+    pie = alt.Chart(top_10_vs_rest_df).mark_arc(
+        innerRadius=0,  
+        stroke='white',
+        strokeWidth=2
+    ).encode(
+        theta=alt.Theta('percentage_of_total:Q', stack=True),
+        color=alt.Color('category:N',
+                       scale=alt.Scale(scheme='category10'),
+                       legend=alt.Legend(title='Facility Category', orient='right')),
+        tooltip=[
+            alt.Tooltip('category:N', title='Category'),
+            alt.Tooltip('num_facilities:Q', title='Number of Facilities', format=','),
+            alt.Tooltip('total_release:Q', title='Total Waste (lbs)', format=',.0f'),
+            alt.Tooltip('percentage_of_total:Q', title='% of Total', format='.1f')
+        ]
+    ).properties(
+        width=400,
+        height=400,
+        title={
+            "text": "Top 10 Facilities vs All Others",
+            "subtitle": f"Total Waste: {total['total_release'].values[0]:,.0f} lbs",
+            "fontSize": 16,
+            "anchor": "middle"
+        }
+    )
+    
+    # Add category labels OUTSIDE the pie
+    text_labels = alt.Chart(top_10_vs_rest_df).mark_text(
+        radius=140,  # Further outside
+        fontSize=12,
+        fontWeight='bold',
+        align='center'
+    ).encode(
+        theta=alt.Theta('percentage_of_total:Q', stack=True),
+        text=alt.Text('category:N'),
+        color=alt.value('black')
+    )
+    
+    # Add percentage labels CENTERED inside each pie slice
+    percentage_labels = alt.Chart(top_10_vs_rest_df).mark_text(
+        radius=70,  # Half of outer radius to center in the slice
+        fontSize=16,
+        fontWeight='bold',
+        fill='white',
+        align='center',
+        baseline='middle'
+    ).encode(
+        theta=alt.Theta('percentage_of_total:Q', stack=True),
+        text=alt.Text('percentage_of_total:Q', format='.1f'),
+        order=alt.Order('percentage_of_total:Q', sort='descending')
+    )
+    
+    # Add "%" sign to the percentage labels
+    percentage_with_sign = alt.Chart(top_10_vs_rest_df).mark_text(
+        radius=55,  # Slightly inside from the number
+        fontSize=12,
+        fill='white',
+        align='center',
+        baseline='middle'
+    ).encode(
+        theta=alt.Theta('percentage_of_total:Q', stack=True),
+    )
+    
+    # Combine all layers
+    pie_chart = pie + text_labels + percentage_labels + percentage_with_sign
+    
+    pie_chart.save('Frontend/chart/pie_chart/top_10_vs_rest.png')
+    return pie_chart
+    
+total_waste_top_10_vs_rest_facilities_pie_chart()
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 #total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 #total_waste_througout_from_top_10_facility_chart_generator()
 #total_waste_througout_from_top_10_facility_chart_generator_interactive()
-total_waste_by_counties_throughout_or_After_2020(choices='')
+#total_waste_by_counties_throughout_or_After_2020(choices='')
 #total_waste_by_state_throughout_or_After_2020()
 end_time = time.time()
 print(f"Runtime {end_time - start_time} Seconds.")
