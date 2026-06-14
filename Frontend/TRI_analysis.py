@@ -231,6 +231,9 @@ def total_waste_top_10_vs_rest_facilities_pie_chart():
     pie_chart.save('Frontend/chart/pie_chart/top_10_vs_rest.png')
     return pie_chart
     
+def total_waste_by_industries_line_chart():
+    df = pd.read_sql(queries["Total_Waste_By_Industry"], con = engine)
+    industry_total_waste_df = df.groupby() 
 total_waste_top_10_vs_rest_facilities_pie_chart()
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 #total_waste_by_counties_throughout_or_After_2020(choice = 'After')

@@ -210,7 +210,34 @@ queries = {
             ROUND(SUM(rf.total_release), 2) AS total_release,
             100.00 AS percentage_of_total
         FROM ranked_facilities rf;
-        """
+        """,
+    "Total_Waste_By_Industry": 
+    """
+        With get_naics_name AS (
+            Select nc.name as national_industry, nc.type, tsn.doc_ctrl_num, tsn.naics_code, tsn.industry_code
+            from tri_submission_naics tsn
+            LEFT JOIN naics_code nc ON nc.naics_code = tsn.naics_code
+        ),
+        get_industry_code_name AS (
+            Select Distinct nc.name as industry_name, nc.type, tsn.industry_code from tri_submission_naics tsn
+            JOIN naics_code nc ON nc.naics_code = tsn.industry_code
+        ),
+        join_naics_industry_code AS (
+            Select gn.national_industry, gi.industry_name, gn.doc_ctrl_num, count(*) OVER() from get_naics_name gn
+            LEFT JOIN get_industry_code_name gi ON gi.industry_code = gn.industry_code
+        ),
+        get_total_waste AS (
+            Select trf.doc_ctrl_num, 
+            SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) OVER(partition by trf.doc_ctrl_num) AS total_release
+            FROM tri_reporting_form trf
+            JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num
+        )
+        Select DISTINCT jn.national_industry, jn.industry_name, 
+        SUM(gt.total_release) OVER(partition by jn.national_industry, jn.industry_name) as total_release
+        FROM join_naics_industry_code jn
+        JOIN get_total_waste gt ON gt.doc_ctrl_num = jn.doc_ctrl_num
+        ORDER BY total_release DESC; 
+    """
 }
 
 for x in queries:
@@ -219,12 +246,10 @@ for x in queries:
 with open('queries.json', 'w') as f:
     json.dump(queries, f, indent=4)
 
-'''
 
+    
 '''
-
-'''
-Select_Individaul_County
+Select_Individaul_County:
 WITH distinct_facility AS (
             SELECT DISTINCT ON(tri_facility_id)
                 tri_facility_id as id,
