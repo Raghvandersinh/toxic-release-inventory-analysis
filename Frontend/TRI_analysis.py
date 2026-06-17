@@ -13,6 +13,8 @@ from census import Census
 import addfips
 import TRI_data_processing
 import TRI_chart_pieces as tcp
+import tabulate
+import matplotlib
 start_time = time.time()
 
 alt.renderers.enable("mimetype")
@@ -627,9 +629,18 @@ def total_waste_hierarchical_treemap():
     
     return final_chart
 
+def most_used_chemical():
+    most_used_chemical_df = pd.read_sql(queries['Most_Dumped_Chemical'], con = engine)
+    bar_chart = alt.Chart(most_used_chemical_df).mark_bar().encode(
+        x = 'chem_name',
+        y = 'reported_chem_count'
+    )
+    bar_chart.save('Frontend/chart/specific_query_results/most_used_chemical.png')
+    
+most_used_chemical()
 #total_waste_top_10_vs_rest_facilities_pie_chart()
 #total_waste_by_industries_interactive_treemap()
-total_waste_hierarchical_treemap()
+#total_waste_hierarchical_treemap()
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 #total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 #total_waste_througout_from_top_10_facility_chart_generator()

@@ -311,6 +311,20 @@ queries = {
         JOIN tri_chem_info tci ON tci.tri_chem_id = gs.tri_chem_id
         WHERE df.county LIKE '%GILA%'
         ORDER BY gs.total_release DESC;
+    ''',
+    'Most_Dumped_Chemical':
+    '''
+        WITH get_facility_released_chem AS (
+            Select trf.tri_chem_id, trf.doc_ctrl_num, tca.produce FROM tri_chem_activity tca
+            JOIN tri_reporting_form trf ON trf.doc_ctrl_num = tca.doc_ctrl_num
+            Where tca.produce = True
+        )
+        Select tci.chem_name, COUNT(tci.chem_name) as reported_chem_count,
+        ROW_NUMBER() OVER(ORDER BY COUNT(tci.chem_name) DESC)
+        FROM tri_chem_info tci
+        JOIN get_facility_released_chem gf ON tci.tri_chem_id = gf.tri_chem_id 
+        GROUP BY tci.chem_name
+        LIMIT 5;
     '''
 }
 
@@ -321,75 +335,4 @@ with open('queries.json', 'w') as f:
     json.dump(queries, f, indent=4)
 
 
-    
-'''
-Select_Individaul_County:
-WITH distinct_facility AS (
-            SELECT DISTINCT ON(tri_facility_id)
-                tri_facility_id as id,
-                CASE
-                    WHEN parent_name IS NOT NULL 
-                        AND UPPER(parent_name) NOT IN ('NA', 'NAN', 'N/A', 'NULL') 
-                        THEN parent_name
-                    WHEN epa_standardized_parent IS NOT NULL 
-                        AND UPPER(epa_standardized_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
-                        THEN epa_standardized_parent
-                    WHEN name IS NOT NULL 
-                        AND UPPER(name) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
-                        THEN name
-                    WHEN epa_standardized_foreign_parent IS NOT NULL 
-                        AND UPPER(epa_standardized_foreign_parent) NOT IN ('NA', 'NAN', 'N/A', 'NULL')
-                        THEN epa_standardized_foreign_parent
-                    ELSE NULL
-                END AS facility_name,
-                city,
-                county,
-                state
-            FROM tri_facility_history 
-    ),
-    get_sum_total_waste AS(
-        SELECT trf.tri_facility_id, trf.tri_chem_id, 
-        SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) OVER(partition by trf.tri_facility_id, trf.tri_chem_id) AS total_release
-        FROM tri_reporting_form trf
-        JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num   
-    )
-    Select DISTINCT df.facility_name, df.city, df.county, df.state, gs.total_release, tci.chem_name FROM distinct_facility df
-    JOIN get_sum_total_waste gs ON gs.tri_facility_id = df.id
-    JOIN tri_chem_info tci ON tci.tri_chem_id = gs.tri_chem_id
-    WHERE df.county LIKE '%GILA%'
-    ORDER BY gs.total_release DESC;
-'''
-'''
-    With get_naics_name AS (
-            Select nc.name as national_industry, nc.type, tsn.doc_ctrl_num, tsn.naics_code, tsn.industry_code, tsn.tri_facility_id
-            from tri_submission_naics tsn
-            LEFT JOIN naics_code nc ON nc.naics_code = tsn.naics_code
-        ),
-        get_industry_code_name AS (
-            Select Distinct nc.name as industry_name, nc.type, tsn.industry_code from tri_submission_naics tsn
-            JOIN naics_code nc ON nc.naics_code = tsn.industry_code
-        ),
-        join_naics_industry_code AS (
-            Select gn.national_industry, gi.industry_name, gn.doc_ctrl_num, count(*) OVER(), gn.tri_facility_id 
-            from get_naics_name gn
-            LEFT JOIN get_industry_code_name gi ON gi.industry_code = gn.industry_code
-        ),
-        get_total_waste AS (
-            Select trf.doc_ctrl_num, 
-            SUM(tft.total_offsite_release::NUMERIC + tft.total_onsite_release::NUMERIC) OVER(partition by trf.doc_ctrl_num) AS total_release
-            FROM tri_reporting_form trf
-            JOIN tri_form_total tft ON tft.doc_ctrl_num = trf.doc_ctrl_num
-        ),
-        get_industry_facility_total AS (
-            Select DISTINCT jn.national_industry, jn.industry_name, jn.tri_facility_id,
-            SUM(gt.total_release) OVER(partition by jn.national_industry, jn.industry_name, jn.tri_facility_id) as total_release
-            FROM join_naics_industry_code jn
-            JOIN get_total_waste gt ON gt.doc_ctrl_num = jn.doc_ctrl_num
-            ORDER BY total_release DESC
-        )
-        Select DISTINCT gi.national_industry, gi.industry_name, tfh.parent_name, ROUND(gi.total_release,2) as total_release
-        From get_industry_facility_total gi
-        JOIN tri_facility_history tfh ON gi.tri_facility_id = tfh.tri_facility_id
-        Where gi.national_industry LIKE '%Organic%'
-        Order by total_release DESC;
-'''
+

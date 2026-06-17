@@ -184,7 +184,11 @@
 
     ![alt text](Frontend/chart/pie_chart/top_10_vs_rest.png)
 
-### Sp
+### Specific Questions:
+
+1. Which chemicals is the most commonly released(Most Reported Chemicals Used)?
+    Most used chemical were Lead -> Nitrate -> Hydrocholoric -> Ammonia -> Zinc
+    ![alt text](Frontend/chart/specific_query_results/most_used_chemical.png)
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
 
