@@ -637,7 +637,16 @@ def most_used_chemical():
     )
     bar_chart.save('Frontend/chart/specific_query_results/most_used_chemical.png')
     
-most_used_chemical()
+def total_carcinogen_per_location():
+    total_carcinogen_per_location_df = pd.read_sql(queries['Total_carcinogen_per_location'], con=engine)
+    bar_chart = alt.Chart(total_carcinogen_per_location_df).mark_bar().encode(
+        x = 'location',
+        y = 'total_chem_location'
+    )
+    bar_chart.save('Frontend/chart/specific_query_results/total_carcinogen_per_location.png')
+
+total_carcinogen_per_location()
+#most_used_chemical()
 #total_waste_top_10_vs_rest_facilities_pie_chart()
 #total_waste_by_industries_interactive_treemap()
 #total_waste_hierarchical_treemap()

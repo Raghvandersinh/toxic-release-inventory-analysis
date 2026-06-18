@@ -325,7 +325,31 @@ queries = {
         JOIN get_facility_released_chem gf ON tci.tri_chem_id = gf.tri_chem_id 
         GROUP BY tci.chem_name
         LIMIT 5;
-    '''
+    ''',
+    'Total_carcinogen_per_location':
+'''
+    WITH get_carciogen_reported_facility AS(
+        Select tci.chem_name, trf.doc_ctrl_num, trf.tri_facility_id From tri_chem_info tci
+        JOIN tri_reporting_form trf ON trf.tri_chem_id = tci.tri_chem_id
+        Where carc_ind = True 
+    ),
+    ranked_data AS (
+        SELECT tfh.state, tfh.county, tfh.city, Count(gcr.chem_name) as total_chem_location,
+        ROW_NUMBER() OVER (partition by CASE
+                                            WHEN tfh.state IS NOT NULL THEN 'state'
+                                            WHEN tfh.state IS NOT NULL THEN 'county'
+                                            WHEN tfh.state IS NOT NULL THEN 'city'
+                                        END
+                                        ORDER BY COUNT(gcr.chem_name) DESC) as ranking
+        FROM  get_carciogen_reported_facility gcr
+        JOIN tri_facility_history tfh ON gcr.tri_facility_id = tfh.tri_facility_id
+        GROUP BY tfh.state, tfh.county, tfh.city
+        LIMIT 5
+    )
+    SELECT CONCAT(state, ' ', county, ' ', city ) as location, total_chem_location, ranking FROM ranked_data
+    WHERE ranking <= 5
+    ORDER BY ranking;
+'''
 }
 
 for x in queries:

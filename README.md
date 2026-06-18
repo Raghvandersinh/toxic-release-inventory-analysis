@@ -189,6 +189,13 @@
 1. Which chemicals is the most commonly released(Most Reported Chemicals Used)?
     Most used chemical were Lead -> Nitrate -> Hydrocholoric -> Ammonia -> Zinc
     ![alt text](Frontend/chart/specific_query_results/most_used_chemical.png)
+2. Which location has the most reported carcinogenic chemicals?
+    TX HARRIS HOUSTON -> TX HARRIS PASADENA -> TX JEFFERSON PORT ARTHU -> KY JEFFERSON LOUISVILLE -> IL COOK CHICAGO
+    ![alt text](Frontend/chart/specific_query_results/total_carcinogen_per_location.png)
+3. Air release vs water release vs land release, which domain dominates?
+    By a Landslide, Land release has the most releases -> Air being the second -> Water being the least.
+    ![alt text](Frontend/chart/state_map/TRI_State_Map_Dashboard_2020s.png)
+
 ### Visualization:
 1. Line chart depicting the trends of waste dumped by Top 10 facility(with the most toxic waste dumped) throughout the years.
 
