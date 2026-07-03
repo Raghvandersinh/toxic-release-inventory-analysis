@@ -10,7 +10,8 @@
         * According to our graph. From 1998 - 2014 we see an upward trend of total releases and 2014 - 2024 we see an up and down spikes. So whats happening here? ![alt text](Frontend/chart/Comico_Alaska.png)
 
             Red Dog Mine is the world largest producers of Zinc and Lead. They are the largest US toxic polluters, which is also backed according to my database, as Cominco Alsaka INC. is ranked 1, by the most total toxic waste released by facility. They are also the reason why Alaska (37.1 million lbs) and the Artic(481.6 million lbs) are the top 2 most released toxic release per pound locations. According to EPA, Alaska ranked first in the nation for the largest total releases of chemicals in 2002, with 545.5 million pounds of toxics coming from the mining industry. The hard rock mining industry is the nation's largest toxic polluters relesed 1.3 billion lbs or 27% of toxics released by U.S. industry. According to Pam Miller, hardrock industry release toxins such as lead, copper, zinc heavy metals etc that pollute land, water, and air. According to our map, Zinc and Lead are the most released toxins in Alsaka. 
-        ![alt text](Frontend/chart/state_map/Alsaka_Waste.png)
+        
+    ![alt text](Frontend/chart/state_map/Alsaka_Waste.png)
         
         https://www.akaction.org/publications/red-dog-and-subsistence-analysis-of-reports-on-elevated-levels-of-heavy-metals-in-plants-used-for-subsistence-near-red-dog-mine-alaska/
         
