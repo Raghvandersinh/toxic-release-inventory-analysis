@@ -440,6 +440,8 @@ The least utilized disposal method among the three domains.
 
 ## Interactive Dashboards
 
+**JUST FOLLOW THIS LINK (IF YOU ARE READING FROM README)** : https://raghvandersinh.github.io/toxic-release-inventory-analysis/TRI_analysis_summary.html
+
 ---
 
 ### Quick Links to Individual Dashboards
