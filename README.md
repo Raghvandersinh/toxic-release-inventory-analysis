@@ -440,9 +440,9 @@ The least utilized disposal method among the three domains.
 
 ## Interactive Dashboards
 
-**JUST FOLLOW THIS LINK (IF YOU ARE READING FROM README)** : https://raghvandersinh.github.io/toxic-release-inventory-analysis/TRI_analysis_summary.html
+**Interactive Dashboards**: [Follow The Link](https://raghvandersinh.github.io/toxic-release-inventory-analysis/TRI_analysis_summary.html)
 
----hkhklhk
+---
 ## Technical Process
 
 The following technologies and methodologies were used to build the ETL pipeline and database:
