@@ -234,148 +234,6 @@ def total_waste_top_10_vs_rest_facilities_pie_chart():
     return pie_chart
     
 
-def total_waste_by_industries_interactive_treemap():
-    import squarify
-    import numpy as np
-    import pandas as pd
-    
-    df = pd.read_sql(queries["Total_Waste_By_Industry"], con=engine)
-    
-    # Create subsector treemap
-    industry_subsector_df = df.groupby(['industry_name', 'national_industry']).agg({
-        'total_release': 'sum'
-    }).reset_index()
-    
-    # Filter out zero or negative values
-    industry_subsector_df = industry_subsector_df[industry_subsector_df['total_release'] > 0]
-    
-    if len(industry_subsector_df) == 0:
-        print("No data to display")
-        return None
-    
-    industry_subsector_df = industry_subsector_df.sort_values('total_release', ascending=False)
-    
-    # Handle very small values
-    min_value = industry_subsector_df['total_release'].max() * 0.0001
-    industry_subsector_df['total_release'] = industry_subsector_df['total_release'].clip(lower=min_value)
-    
-    # Generate coordinates
-    values = industry_subsector_df['total_release'].values
-    
-    try:
-        sizes = squarify.normalize_sizes(values, 100, 100)
-        rects = squarify.squarify(sizes, 0, 0, 100, 100)
-    except Exception as e:
-        print(f"Error in squarify: {e}")
-        # Fallback grid layout
-        n = len(values)
-        cols = int(np.ceil(np.sqrt(n)))
-        rows = int(np.ceil(n / cols))
-        rects = []
-        for i in range(n):
-            row = i // cols
-            col = i % cols
-            rects.append({
-                'x': col * (100/cols),
-                'y': row * (100/rows),
-                'dx': 100/cols,
-                'dy': 100/rows
-            })
-    
-    # Create dataframe and EXPLICITLY calculate x2 and y2
-    treemap_df = pd.DataFrame(rects, columns=['x', 'y', 'dx', 'dy'])
-    treemap_df['industry_name'] = industry_subsector_df['industry_name'].values
-    treemap_df['national_industry'] = industry_subsector_df['national_industry'].values
-    treemap_df['total_release'] = values
-    treemap_df['percentage'] = (values / values.sum() * 100).round(2)
-    
-    # CRITICAL: Calculate x2 and y2 as actual columns
-    treemap_df['x2'] = treemap_df['x'] + treemap_df['dx']
-    treemap_df['y2'] = treemap_df['y'] + treemap_df['dy']
-    
-    # Calculate center points for text
-    treemap_df['x_center'] = treemap_df['x'] + treemap_df['dx'] / 2
-    treemap_df['y_center'] = treemap_df['y'] + treemap_df['dy'] / 2
-    
-    # Debug: Print first few rows to verify coordinates
-    print("Treemap coordinates sample:")
-    print(treemap_df[['x', 'y', 'dx', 'dy', 'x2', 'y2', 'industry_name']].head())
-    
-    # Create chart with EXPLICIT column references
-    treemap = alt.Chart(treemap_df).mark_rect(
-        stroke='white',
-        strokeWidth=1
-    ).encode(
-        x=alt.X('x:Q', 
-                axis=None, 
-                scale=alt.Scale(domain=[0, 100])),
-        y=alt.Y('y:Q', 
-                axis=None, 
-                scale=alt.Scale(domain=[0, 100])),
-        x2=alt.X2('x2:Q'),  # Use explicit column name
-        y2=alt.Y2('y2:Q'),  # Use explicit column name
-        color=alt.Color('national_industry:N',
-                       scale=alt.Scale(scheme='tableau20'),
-                       legend=alt.Legend(title='National Industry', orient='bottom')),
-        tooltip=[
-            alt.Tooltip('national_industry:N', title='National Industry'),
-            alt.Tooltip('industry_name:N', title='Subsector'),
-            alt.Tooltip('total_release:Q', title='Total Waste', format=',.0f'),
-            alt.Tooltip('percentage:Q', title='% of Total', format='.1f')
-        ]
-    )
-    
-    # Labels for larger sections only
-    labels = alt.Chart(treemap_df).mark_text(
-        align='center',
-        baseline='middle',
-        fontSize=8,
-        fontWeight='bold',
-        limit=80
-    ).encode(
-        x='x_center:Q',
-        y='y_center:Q',
-        text='industry_name:N',
-        color=alt.condition(
-            alt.datum.total_release > treemap_df['total_release'].median(),
-            alt.value('white'),
-            alt.value('black')
-        )
-    ).transform_filter(
-        (alt.datum.dx > 8) & (alt.datum.dy > 8)
-    )
-    
-    # Interactivity
-    highlight = alt.selection_point(
-        fields=['national_industry'],
-        name='highlight_industry',
-        empty='none'
-    )
-    
-    final_chart = (treemap + labels).add_params(
-        highlight
-    ).encode(
-        opacity=alt.condition(highlight, alt.value(1), alt.value(0.5)),
-        strokeWidth=alt.condition(highlight, alt.value(3), alt.value(1))
-    ).properties(
-        title={
-            "text": "Total Waste by Industry Subsector",
-            "subtitle": f"Click legend to highlight • Hover for details • Total: {values.sum():,.0f}",
-            "fontSize": 16
-        },
-        width=900,
-        height=700
-    ).configure_view(
-        strokeWidth=0
-    )
-    
-    import os
-    os.makedirs('Frontend/chart/tree_map', exist_ok=True)
-    
-    final_chart.save('Frontend/chart/tree_map/industries_tree_map.html')
-    
-    return final_chart
-
 def total_waste_hierarchical_treemap():
     import squarify
     import numpy as np
@@ -609,7 +467,7 @@ def total_waste_hierarchical_treemap():
     final_chart = (subsector_layer + national_layer + national_labels).add_params(
         highlight
     ).encode(
-        opacity=alt.condition(highlight, alt.value(1), alt.value(0.7))
+        opacity=alt.condition(highlight, alt.value(1), alt.value(0.4))
     ).properties(
         title={
             "text": "Hierarchical Treemap: Top 10 National Industries within Top 10 Subsectors",
@@ -626,7 +484,8 @@ def total_waste_hierarchical_treemap():
     os.makedirs('Frontend/chart/tree_map', exist_ok=True)
     
     final_chart.save('Frontend/chart/tree_map/hierarchical_industries_tree_map.html')
-    
+    final_chart.save('Frontend/chart/tree_map/hierarchical_industries_tree_map.png')
+
     return final_chart
 
 def most_used_chemical():
@@ -645,11 +504,11 @@ def total_carcinogen_per_location():
     )
     bar_chart.save('Frontend/chart/specific_query_results/total_carcinogen_per_location.png')
 
-total_carcinogen_per_location()
+#total_carcinogen_per_location()
 #most_used_chemical()
 #total_waste_top_10_vs_rest_facilities_pie_chart()
 #total_waste_by_industries_interactive_treemap()
-#total_waste_hierarchical_treemap()
+total_waste_hierarchical_treemap()
 #def top_10_vs_rest_waste_release_facilities_by_pie_chart()
 #total_waste_by_counties_throughout_or_After_2020(choice = 'After')
 #total_waste_througout_from_top_10_facility_chart_generator()

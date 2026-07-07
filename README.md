@@ -327,9 +327,13 @@ Louisiana contains 25% of U.S. petrochemical products, harming air, water, and s
 #### **Question:** What industries were most involved in dumping waste?
 
 ---
+**Tree Map**
+![alt text](Frontend/chart/tree_map/hierarchical_industries_tree_map.png)
 
 **Rank 1: Metal Ore Mining**
 Copper, Zinc, Lead, and Nickel — All top 5 facilities belong to this sector
+
+![alt text](Frontend/chart/tree_map/Metal_Ore_Tree.png)
 
 ---
 
@@ -337,11 +341,15 @@ Copper, Zinc, Lead, and Nickel — All top 5 facilities belong to this sector
 All Other Basic Organic Chemical Manufacturing (NAICS 325199)
 Includes American Cyanamid Superfund site: 575-acre facility with VOCs, SVOCs, and metals contamination
 
+![alt text](Frontend/chart/tree_map/Chemical_Manufacture_Tree.png)
+
 ---
 
 **Rank 3: Primary Metal Manufacturing**
 Iron and Steel Mills & Ferroalloy Manufacturing
 U.S. Steel Gary Works: metals, VOCs, SVOCs, and PCBs
+
+![alt text](Frontend/chart/tree_map/Primary_Metal_Manufacturing.png)
 
 ---
 
@@ -349,11 +357,15 @@ U.S. Steel Gary Works: metals, VOCs, SVOCs, and PCBs
 Fossil Fuel Electric Power Generation
 Rio Tinto primary contributor
 
+![alt text](Frontend/chart/tree_map/Eletric_Power_GDT.png)
+
 ---
 
 **Rank 5: Paper Manufacturing**
 Pulp Mills
 Rayonier Mill: 30,000+ tons of contaminated material removed to date
+
+![alt text](Frontend/chart/tree_map/Paper_Manufacturing.png)
 
 ---
 
